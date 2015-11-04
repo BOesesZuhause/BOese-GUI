@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+	<meta charset="UTF-8">
+	<title></title>
+	<link rel="stylesheet" href="html/style.css">
+	<link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+
+</head>
+<body>
+	<div id="header">
+		<span id="logo_span">
+			LOGO
+		</span>
+		<span id="headline_span">
+			<h1>HEADLINE</h1>
+		</span>
+		<span id="login_span">
+			login<br />language
+		</span>
+	</div>
+	<div id="tabs">
+		<ul>
+			<li><a href="#tab_overview">Nunc tincidunt</a></li>
+			<li><a href="#tab_devices">Proin dolor</a></li>
+			<li><a href="#tab_rule">Aenean lacinia</a></li>
+			<li><a href="#tab_user">Aenean lacinia</a></li>
+		</ul>
+		<div id="tab_overview">
+			<p>Auf dieser Seite werden Informationen über den aktuellen zustand aller Geräte geliefert</p>
+		</div>
+		<div id="tab_devices">
+			<div id="accordion">
+			</div>
+		</div>
+		<div id="tab_rule">
+			<input type="submit" id="btn_rule_add" value="Regel hinzufügen">
+			<input type="submit" id="btn_rule_save" value="neue Regeln speichern">
+			<div id="accordion_rules">
+			</div>
+		</div>
+		<div id="tab_user">
+			<p>Hier stehen bald alle Informationen zu Usern und Gruppen, Man kann neue erstellen und Usern Gruppen zuweisen</p>
+		</div>
+	</div>
+
+
+
+
+
+	<script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
+	<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.js"></script>
+	<script src="/socket.io/socket.io.js"></script>
+	<script src="/html/main.js"></script>
+</body>
+</html>

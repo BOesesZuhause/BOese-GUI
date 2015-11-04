@@ -1,0 +1,16 @@
+{
+  "name": "BoeserWebConnector",
+  "version": "1.0.0",
+  "description": "The Webinterface for Boese SH",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.13.3",
+    "node-persist": "0.0.6",
+    "socket.io": "^1.3.7"
+  }
+}
