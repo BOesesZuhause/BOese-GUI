@@ -1,6 +1,7 @@
 $(document).ready(function () {
 	var ruleNr = 0;
 	var newRuleNr = 0;
+	var gotNewRuleNr;
 
 	$(function() {
 		$('body').css('background-color', '#D5D5D5');
@@ -32,6 +33,7 @@ $(document).ready(function () {
 						event.preventDefault();
 						var accRuleLength = $('#accordion_rules').children().length;
 						var newRuleList = [];
+						var error = true;
 						var parser = new DOMParser();
 						for (var i = 0; i < accRuleLength; i++) {
 							var ruleDivChilds = $('#ruleDiv_' + i).children();
@@ -44,6 +46,14 @@ $(document).ready(function () {
 											break;
 										case "Active":
 											newRule.Active = $(this).prop('checked');
+											break;
+										case "InsertDate":
+											var date = new Date($(this).val())
+											newRule.InsertDate = date.getTime();
+											break;
+										case "ModifyDate":
+											var date = new Date($(this).val())
+											newRule.ModifyDate = date.getTime();
 											break;
 										case "Permissions":
 											var xmlString = $(this).val();
@@ -89,12 +99,20 @@ $(document).ready(function () {
 									&& (newRule.Actions != null)
 									&& (newRule.Conditions != null)
 									&& (newRule.Permissions != null)) {
-								renameProperty(newRule, "RuleId", "TempRuleId")
+								renameProperty(newRule, "RuleId", "TempRuleId");
 								newRuleList.push(newRule);
+								error = false;
+							} else if (newRule.RuleId >= 0) {
+								
 							}
-							console.log(newRuleList);
 						}
-						socket.emit('createNewRule', newRuleList);
+						if (!error) {
+							console.log(newRuleList);
+							socket.emit('createNewRule', newRuleList);
+						} else {
+							console.log("Error");
+						}
+						
 					});
 	});
 	var socket = io();
@@ -107,18 +125,38 @@ $(document).ready(function () {
 		}
 	});
 
+	socket.on('uiSendNewRuleNr', function(ruleNr) {
+		newRuleNr = ruleNr;
+		gotNewRuleNr = true;
+		console.log(gotNewRuleNr);
+	});
+
 
 	var addRuleAccordion = function(rule) {
-		if (rule == null) --newRuleNr;
+		if (rule == null) {
+			gotNewRuleNr = false;
+			var date = new Date();
+			socket.emit('requestNewRuleNr', function (ruleNr) { 
+				newRuleNr = ruleNr;
+				addRuleAccordionHTML(null);
+			});
+		} else {
+			addRuleAccordionHTML(rule);
+		}
+		
+	}
+
+	var addRuleAccordionHTML = function(rule) {
 		$('#accordion_rules').append('<div class="group"><h3>Rule ' + ((rule !== null) ? rule.RuleId : newRuleNr) + ' </h3><div class="ruleDiv" id="ruleDiv_' + ruleNr + '"></div></div>');
 		$('#ruleDiv_' + ruleNr).append('<input type="hidden" name="RuleId" value="' + ((rule !== null) ? rule.RuleId : newRuleNr) + '">')
 		$('#ruleDiv_' + ruleNr).append(createRuleDivCheck(ruleNr, "Active", (rule !== null) ? rule.Active: true));
-		$('#ruleDiv_' + ruleNr).append(createRuleDivInput(ruleNr, "InsertDate", (rule !== null) ? rule.InsertDate : getDateTime()));
-		$('#ruleDiv_' + ruleNr).append(createRuleDivInput(ruleNr, "ModifyDate", (rule !== null) ? rule.ModifyDate : getDateTime()));
-		$('#ruleDiv_' + ruleNr).append(createRuleDivInput(ruleNr, "Permissions", (rule !== null) ? rule.Permissions : ""));
-		$('#ruleDiv_' + ruleNr).append(createRuleDivInput(ruleNr, "Conditions", (rule !== null) ? rule.Conditions : ""));
-		$('#ruleDiv_' + ruleNr).append(createRuleDivInput(ruleNr, "Actions", (rule !== null) ? rule.Actions : ""));
+		$('#ruleDiv_' + ruleNr).append(createRuleDivInput(ruleNr, "InsertDate", (rule !== null) ? getDateTime(new Date(rule.InsertDate)) : getDateTime(new Date())));
+		$('#ruleDiv_' + ruleNr).append(createRuleDivInput(ruleNr, "ModifyDate", (rule !== null) ? getDateTime(new Date(rule.ModifyDate)) : getDateTime(new Date())));
+		$('#ruleDiv_' + ruleNr).append(createRuleDivInput(ruleNr, "Permissions", (rule !== null) ? escapeHtml(rule.Permissions) : ""));
+		$('#ruleDiv_' + ruleNr).append(createRuleDivInput(ruleNr, "Conditions", (rule !== null) ? escapeHtml(rule.Conditions) : ""));
+		$('#ruleDiv_' + ruleNr).append(createRuleDivInput(ruleNr, "Actions", (rule !== null) ? escapeHtml(rule.Actions) : ""));
 		$('#accordion_rules').accordion("refresh");
+		$('#accordion_rules').accordion({active:"h3:last"});
 		ruleNr++;
 	}
 
@@ -134,8 +172,7 @@ $(document).ready(function () {
 	}
 
 
-	function getDateTime() {
-		var date = new Date();
+	function getDateTime(date) {
 		var hour = date.getHours();
 		hour = (hour < 10 ? "0" : "") + hour;
 		var min  = date.getMinutes();
@@ -145,20 +182,35 @@ $(document).ready(function () {
 		month = (month < 10 ? "0" : "") + month;
 		var day  = date.getDate();
 		day = (day < 10 ? "0" : "") + day;
-		return year + "." + month + "." + day + " " + hour + ":" + min;
+		return year + "-" + month + "-" + day + "T" + hour + ":" + min + ":00";
 	}
 
 	var renameProperty = function (object, oldName, newName) {
-	// Do nothing if the names are the same
-	if (oldName == newName) {
+		// Do nothing if the names are the same
+		if (oldName == newName) {
+			return object;
+		}
+		// Check for the old property name to avoid a ReferenceError in strict mode.
+		if (object.hasOwnProperty(oldName)) {
+			object[newName] = object[oldName];
+			delete object[oldName];
+		}
 		return object;
-	}
-	// Check for the old property name to avoid a ReferenceError in strict mode.
-	if (object.hasOwnProperty(oldName)) {
-		object[newName] = object[oldName];
-		delete object[oldName];
-	}
-	return object;
 	};
+
+	var entityMap = {
+		"&": "&amp;",
+		"<": "&lt;",
+		">": "&gt;",
+		'"': '&quot;',
+		"'": '&#39;',
+		"/": '&#x2F;'
+	};
+
+	function escapeHtml(string) {
+		return String(string).replace(/[&<>"'\/]/g, function (s) {
+			return entityMap[s];
+		});
+	}
 });
 

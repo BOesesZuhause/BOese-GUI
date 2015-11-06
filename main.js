@@ -20,6 +20,8 @@ var rules = {};
 var newRules = [];
 var distributorConnection = null;
 
+var newRuleNr = 0;
+
 
 storage.initSync({dir:'storageData/'});
 storage.getItem("connector", function (err, value) {
@@ -42,35 +44,19 @@ app.get('/', function(req, res) {
 io.on('connection', function(socket){
     console.log('a user connected');
 
-    socket.on('requestRules', function(msg){
-        uiSendRules(socket, [{"RuleId" : 1,
-        "Active" : true,
-        "InsertDate" : "2015.10.4 16:30",
-        "ModifyDate" : "2015.10.4 16:30",
-        "Permissions" : "<a></a>",
-        "Conditions" : "<b></b>",
-        "Actions" : "<c></c>"},
-        {"RuleId" : 2,
-        "Active" : false,
-        "InsertDate" : "2015.10.4 16:20",
-        "ModifyDate" : "2015.10.4 16:20",
-        "Permissions" : "<a></a>",
-        "Conditions" : "<b></b>",
-        "Actions" : "<c></c>"}]);
+    socket.on('requestRules', function(msg) {
+        socket.emit("uiSendRules", rules);
+    });
+
+    socket.on('requestNewRuleNr', function(func) {
+        func(--newRuleNr);
     });
 
     socket.on('createNewRule', function(ruleList) {
-        console.log("Got new Rules to create");
-        console.log(ruleList);
-
         newRules = ruleList;
         sendUserCreateRules(distributorConnection, newRules);
     });
 });
-
-var uiSendRules = function(socket, rules) {
-    socket.emit("uiSendRules", rules);
-}
 
 http.listen(3000, function(){
   console.log('listening on *:3000');
@@ -155,11 +141,19 @@ client.on('connect', function(connection) {
                     console.log(zones);
                     break;
                 case 60: // UserSendRules
+                    console.log("UserSendRules");
                     if (obj.Rules) {
                         rules = obj.Rules;
+                    } else {
+                        rules = [];
                     }
-                    console.log("Received Rules");
-                    console.log(rules);
+                    if (newRules.length > 0) { // TODO show user incorrect rules
+                        for (var i = 0; i < newRules.length; i++) {
+                            renameProperty(newRules[i], "TempRuleId", "RuleId");
+                            rules.push(newRules[i]);
+                        }  
+                    }
+                    io.emit("uiSendRules", rules);
                     break;
                 case 91: // UserConfirmRules
                     if (obj.Rules) {
@@ -170,12 +164,9 @@ client.on('connect', function(connection) {
                                 }
                             }
                         }
-                        if (newRules.length > 0) { // TODO show user incorrect rules
-                            console.log("some rules were not confirmed");
-                        }
-
+                        sendUserRequestAllRules(connection);
                     }
-
+                    break;
             }
             
         }
@@ -191,6 +182,7 @@ var sendUserCreateRules = function(connection, ruleList) {
         if (connection.connected) {
             connection.send(JSON.stringify(reqConn));
         }
+        console.log(JSON.stringify(reqConn));
     }
 }
 
@@ -261,3 +253,17 @@ var generateHeader = function(messageType) {
             ConnectorId : connector.id,
             Timestamp : new Date().getTime()}
 }
+
+
+var renameProperty = function (object, oldName, newName) {
+    // Do nothing if the names are the same
+    if (oldName == newName) {
+        return object;
+    }
+    // Check for the old property name to avoid a ReferenceError in strict mode.
+    if (object.hasOwnProperty(oldName)) {
+        object[newName] = object[oldName];
+        delete object[oldName];
+    }
+    return object;
+};
