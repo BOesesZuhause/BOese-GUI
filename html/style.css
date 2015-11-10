@@ -42,7 +42,23 @@ body {
 	-o-transform: scale(1.5);
 }
 
-.ruleOutInput {
+.deviceOutInput {
+	width: 1000px;
+}
+
+.lbl_DeviceInput {
+	display:inline-block;
+	width: 200px;
+}
+
+.deviceOutCheck {
+	-ms-transform: scale(1.5); /* IE */
+	-moz-transform: scale(1.5); /* FF */
+	-webkit-transform: scale(1.5); /* Safari and Chrome */
+	-o-transform: scale(1.5);
+}
+
+.deviceOutInput {
 	width: 1000px;
 }
 

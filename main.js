@@ -13,7 +13,7 @@ var connector = {id : -1, pw : null};
 var deviceIdArray = [];
 var connectorIdArray = [];
 var deviceList = [];
-var deviceComponentList = {};
+var deviceComponentList = [];
 var connectors = {};
 var zones = {};
 var rules = {};
@@ -44,8 +44,16 @@ app.get('/', function(req, res) {
 io.on('connection', function(socket){
     console.log('a user connected');
 
+    socket.on('requestDevices', function(msg) {
+        socket.emit('uiSendDevices', deviceList);
+    });
+
+    socket.on('requestDeviceComponents', function(msg) {
+        socket.emit('uiSendDeviceComponents', deviceComponentList);
+    });
+
     socket.on('requestRules', function(msg) {
-        socket.emit("uiSendRules", rules);
+        socket.emit('uiSendRules', rules);
     });
 
     socket.on('requestNewRuleNr', function(func) {
@@ -113,6 +121,7 @@ client.on('connect', function(connection) {
                             connectorIdArray.push(deviceList[key].ConnectorId);
                         }
                     }
+                    io.emit('uiSendDevices', deviceList);
                     sendUserRequestDeviceComponents(connection, deviceIdArray);
                     break;
                 case 53: //UserSendDeviceComponents
@@ -123,8 +132,9 @@ client.on('connect', function(connection) {
                         deCo = obj.Components;
                     }
                     if (typeof deCo !== 'undefined' && deCo) {
-                        deviceComponentList[devId] = deCo;
+                        deviceComponentList.push({'DeviceId' : devId, 'DeviceComponents' : deCo});
                     }
+                    io.emit('uiSendDeviceComponents', deviceComponentList);
                     break;
                 case 56: // UserSendConnectors
                     if (obj.Connectors) {

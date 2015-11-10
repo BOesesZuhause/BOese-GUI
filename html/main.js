@@ -1,3 +1,5 @@
+var accordionOptions = {header: "> div > h3", heightStyle: "content", collapsible: true};
+
 $(document).ready(function () {
 	var ruleNr = 0;
 	var newRuleNr = 0;
@@ -11,9 +13,7 @@ $(document).ready(function () {
 		$('#tabs ul:first li:eq(1) a').text("Geräte");
 		$('#tabs ul:first li:eq(2) a').text("Regeln");
 		$('#tabs ul:first li:eq(3) a').text("Benutzer");
-		$('#accordion').append('<div class="group"><h3>Device 1</h3><div>GeräteInfo 1</div></div>');
-		$('#accordion').append('<div class="group"><h3>Device 2</h3><div>GeräteInfo 2</div></div>');
-		$('#accordion').append('<div class="group"><h3>Device 3</h3><div>GeräteInfo 3</div></div>');
+		$('#tabs ul:first li:eq(4) a').text("Zonen");
 		$('#accordion').accordion({header: "> div > h3", heightStyle: "content", collapsible: true})
 					.sortable({
 						axis: "y",
@@ -23,7 +23,7 @@ $(document).ready(function () {
 							$(this).accordion("refresh");
 						}
 					});
-		$('#accordion_rules').accordion({header: "> div > h3", heightStyle: "content", collapsible: true});
+		$('#accordion_rules').accordion(accordionOptions);
 		$('#btn_rule_add').button().click(function(event) {
 						event.preventDefault();
 						addRuleAccordion(null);
@@ -117,6 +117,29 @@ $(document).ready(function () {
 	});
 	var socket = io();
 	socket.emit('requestRules', null);
+	socket.emit('requestDevices', null);
+	socket.emit('requestDeviceComponents', null);
+
+	socket.on('uiSendDevices', function(data) {
+		$('#accordion').empty();
+		for (var i = 0; i < data.length; i++) {
+			addDeviceAccordion(data[i]);
+		}
+	});
+
+	socket.on('uiSendDeviceComponents', function(data) {
+		for (var i = 0; i < data.length; i++) {
+			var devId = data[i].DeviceId;
+			var deCos = data[i].DeviceComponents;
+			$('#deviceDiv_' + devId + '_accordion').empty();
+			for (var j = 0; j < deCos.length; j++) {
+				addDeviceComponentAccordion(devId, deCos[j]);
+			}
+			$('#deviceDiv_' + devId + '_accordion').accordion("refresh");
+			
+		}
+		//console.log(data);
+	})
 
 	socket.on("uiSendRules", function(data) {
 		$('#accordion_rules').empty();
@@ -128,9 +151,50 @@ $(document).ready(function () {
 	socket.on('uiSendNewRuleNr', function(ruleNr) {
 		newRuleNr = ruleNr;
 		gotNewRuleNr = true;
-		console.log(gotNewRuleNr);
 	});
 
+	var btn_deco_value_set = function(event, deviceId, deviceComponentId) {
+		event.preventDefault();
+	}
+
+	var addDeviceComponentAccordion = function(deviceId, deCo) {
+		$('#deviceDiv_' + deviceId + '_accordion').append('<div class="group"><h3>' 
+						+ deCo.ComponentName 
+						+ '</h3><div class="deviceComponentDiv" id="deviceComponentDiv_' 
+						+ deCo.DeviceComponentId 
+						+ '"></div></div>');
+		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "ComponentID", deCo.DeviceComponentId));
+		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Description", deCo.Description));
+		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Name", deCo.ComponentName));
+		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Value", deCo.Value));
+		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Value_Timestamp", deCo.Timestamp));
+		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Status", deCo.Status));
+		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "IsActor", deCo.Aktor));
+		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Unit", deCo.Unit));
+		if (deCo.Aktor) {
+			$('#deviceComponentDiv_' + deCo.DeviceComponentId).append('<input type="submit" id="btn_deco_value_set_' + deviceId + '_' + deCo.DeviceComponentId + '" value="Value setzen">');
+			$('#btn_deco_value_set_' + deviceId + '_' + deCo.DeviceComponentId).button().click(btn_deco_value_set(event, deviceId, deCo.DeviceComponentId));
+		}
+	}
+
+	var createDeviceCompDivInput = function(deviceNr, deviceComponentNr, text, content) {
+		return '<label class="lbl_DeviceInput" for="deviceComponentOutInp_' + deviceNr + '_' + deviceComponentNr + '_' + text + '">' + text + '</label>'
+				+ '<input class="deviceOutInput" name="' + text + '" id="deviceComponentOutInp_' + deviceNr + '_' + deviceComponentNr + '_' + text + '" value="' + content + '" /><br />';
+	}
+
+	var addDeviceAccordion = function(device) {
+		$('#accordion').append('<div class="group"><h3>' + device.DeviceName + '</h3><div class="deviceDiv" id="deviceDiv_' + device.DeviceId + '"></div></div>');
+		$('#deviceDiv_' + device.DeviceId).append(createDeviceDivInput(device.DeviceId, "DeviceID", device.DeviceId));
+		$('#deviceDiv_' + device.DeviceId).append(createDeviceDivInput(device.DeviceId, "ZoneID", device.ZoneId));
+		$('#deviceDiv_' + device.DeviceId).append('<div id="deviceDiv_' + device.DeviceId + '_accordion"></div>');
+		$('#deviceDiv_' + device.DeviceId + '_accordion').accordion(accordionOptions);
+		$('#accordion').accordion("refresh");
+	}
+
+	var createDeviceDivInput = function(deviceNr, text, content) {
+		return '<label class="lbl_DeviceInput" for="deviceOutInp_' + deviceNr + '_' + text + '">' + text + '</label>'
+				+ '<input class="deviceOutInput" name="' + text + '" id="deviceOutInp_' + deviceNr + '_' + text + '" value="' + content + '" /><br />';
+	}
 
 	var addRuleAccordion = function(rule) {
 		if (rule == null) {
@@ -147,7 +211,7 @@ $(document).ready(function () {
 	}
 
 	var addRuleAccordionHTML = function(rule) {
-		$('#accordion_rules').append('<div class="group"><h3>Rule ' + ((rule !== null) ? rule.RuleId : newRuleNr) + ' </h3><div class="ruleDiv" id="ruleDiv_' + ruleNr + '"></div></div>');
+		$('#accordion_rules').append('<div class="group"><h3>Rule ' + ((rule !== null) ? rule.RuleId : "New") + ' </h3><div class="ruleDiv" id="ruleDiv_' + ruleNr + '"></div></div>');
 		$('#ruleDiv_' + ruleNr).append('<input type="hidden" name="RuleId" value="' + ((rule !== null) ? rule.RuleId : newRuleNr) + '">')
 		$('#ruleDiv_' + ruleNr).append(createRuleDivCheck(ruleNr, "Active", (rule !== null) ? rule.Active: true));
 		$('#ruleDiv_' + ruleNr).append(createRuleDivInput(ruleNr, "InsertDate", (rule !== null) ? getDateTime(new Date(rule.InsertDate)) : getDateTime(new Date())));
@@ -167,7 +231,7 @@ $(document).ready(function () {
 	}
 
 	var createRuleDivInput = function(ruleNr, text, content) {
-		return '<label class="lbl_RuleInput" for="ruleOutChk_' + ruleNr + '_' + text + '">' + text + '</label>'
+		return '<label class="lbl_RuleInput" for="ruleOutInp_' + ruleNr + '_' + text + '">' + text + '</label>'
 				+ '<input class="ruleOutInput" name="' + text + '" id="ruleOutInp_' + ruleNr + '_' + text + '" value="' + content + '" /><br />';
 	}
 
