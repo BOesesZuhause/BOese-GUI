@@ -18,6 +18,7 @@ var connectors = {};
 var zones = {};
 var rules = {};
 var newRules = [];
+var temporaries = [];
 var distributorConnection = null;
 
 var newRuleNr = 0;
@@ -43,6 +44,14 @@ app.get('/', function(req, res) {
 
 io.on('connection', function(socket){
     console.log('a user connected');
+
+    socket.on('requestTemps', function(msg) {
+        socket.emit('uiSendTemps', temporaries);
+    });
+
+    socket.on('confirmTemps', function(msg) {
+        // TODO
+    });
 
     socket.on('requestDevices', function(msg) {
         socket.emit('uiSendDevices', deviceList);
@@ -109,6 +118,7 @@ client.on('connect', function(connection) {
                     sendUserRequestAllConnectors(connection);
                     sendUserRequestAllZones(connection);
                     sendUserRequestAllRules(connection);
+                    sendUserRequestTemps(connection);
             		break;
                 case 51: // UserSendDevices
                     if (obj.Devices) {
@@ -151,7 +161,6 @@ client.on('connect', function(connection) {
                     console.log(zones);
                     break;
                 case 60: // UserSendRules
-                    console.log("UserSendRules");
                     if (obj.Rules) {
                         rules = obj.Rules;
                     } else {
@@ -164,6 +173,18 @@ client.on('connect', function(connection) {
                         }  
                     }
                     io.emit("uiSendRules", rules);
+                    break;
+                case 81: // UserSendTemps
+                    if (obj.TmpConnectors) {
+                        temporaries[TmpConnectors] = obj.TmpConnectors;
+                    } else {}
+                    if (obj.TmpDevices) {
+                        temporaries[TmpDevices] = obj.TmpDevices;
+                    } else {}
+                    if (obj.TmpDeviceComponents) {
+                        temporaries[TmpDeviceComponents] = obj.TmpDeviceComponents;
+                    } else {}
+                    io.emit('uiSendTemps', temporaries);
                     break;
                 case 91: // UserConfirmRules
                     if (obj.Rules) {
@@ -183,6 +204,13 @@ client.on('connect', function(connection) {
     });
     sendRequestConnection(connection);
 });
+
+var sendUserRequestTemps = function(connection) {
+    var reqConn = {Header : generateHeader(80)};
+    if (connection.connected) {
+        connection.send(JSON.stringify(reqConn));
+    }
+}
 
 var sendUserCreateRules = function(connection, ruleList) {
     if (connection !== null) {

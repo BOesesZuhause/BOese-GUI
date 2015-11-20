@@ -14,6 +14,7 @@ $(document).ready(function () {
 		$('#tabs ul:first li:eq(2) a').text("Regeln");
 		$('#tabs ul:first li:eq(3) a').text("Benutzer");
 		$('#tabs ul:first li:eq(4) a').text("Zonen");
+		$('#tabs ul:first li:eq(5) a').text("Benachrichtigungen");
 		$('#accordion').accordion({header: "> div > h3", heightStyle: "content", collapsible: true})
 					.sortable({
 						axis: "y",
@@ -169,9 +170,9 @@ $(document).ready(function () {
 		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Value", deCo.Value));
 		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Value_Timestamp", deCo.Timestamp));
 		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Status", deCo.Status));
-		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "IsActor", deCo.Aktor));
+		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "IsActor", deCo.Actor));
 		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Unit", deCo.Unit));
-		if (deCo.Aktor) {
+		if (deCo.Actor) {
 			$('#deviceComponentDiv_' + deCo.DeviceComponentId).append('<input type="submit" id="btn_deco_value_set_' + deviceId + '_' + deCo.DeviceComponentId + '" value="Value setzen">');
 			$('#btn_deco_value_set_' + deviceId + '_' + deCo.DeviceComponentId).button().click(btn_deco_value_set(event, deviceId, deCo.DeviceComponentId));
 		}
