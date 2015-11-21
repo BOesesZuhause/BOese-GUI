@@ -24,7 +24,9 @@ $(document).ready(function () {
 							$(this).accordion("refresh");
 						}
 					});
+		$('#accordion_overview').accordion(accordionOptions);
 		$('#accordion_rules').accordion(accordionOptions);
+		$('#accordion_overview').accordion(accordionOptions);
 		$('#btn_rule_add').button().click(function(event) {
 						event.preventDefault();
 						addRuleAccordion(null);
@@ -115,11 +117,13 @@ $(document).ready(function () {
 						}
 						
 					});
+		
 	});
 	var socket = io();
 	socket.emit('requestRules', null);
 	socket.emit('requestDevices', null);
 	socket.emit('requestDeviceComponents', null);
+	socket.emit('requestTemps', null);
 
 	socket.on('uiSendDevices', function(data) {
 		$('#accordion').empty();
@@ -140,7 +144,102 @@ $(document).ready(function () {
 			
 		}
 		//console.log(data);
-	})
+	});
+
+	socket.on('uiSendTemps', function(data) {
+		$('#accordion_overview').empty();
+		var isOneTmp = false;	
+		if (data.TmpConnectors !== undefined && data.TmpConnectors != null && data.TmpConnectors.length > 0) {
+			isOneTmp = true;
+			$('#accordion_overview').append(
+					  '<div class="group"><h3>TempConnectors</h3><div class="deviceDiv" id="accordion_overview_con">'
+					+ '<table id="overviewDiv_con_tab"><tr><th>TempID</th><th>Name</th><th>Bestätigen</th></tr></table></div></div>');
+			for (var i = 0; i < data.TmpConnectors.length; i++) {
+				$('#overviewDiv_con_tab').append(
+					'<tr class="overviewDiv_con_tab_row">'
+					+ '<td  class="overviewDiv_con_tab_id">' + data.TmpConnectors[i].ConnectorTmpId + '</td>'
+					+ '<td>' + data.TmpConnectors[i].ConnectorName + '</td>'
+					+ '<td><input class="confirm_temp" type="checkbox"></td>'
+					+ '</tr>'
+					);
+			}
+		} else {}
+		if (data.TmpDevices !== undefined && data.TmpDevices != null && data.TmpDevices.length > 0) {
+			isOneTmp = true;
+			$('#accordion_overview').append(
+					  '<div class="group"><h3>TempDevices</h3><div class="deviceDiv" id="accordion_overview_dev">'
+					+ '<table id="overviewDiv_dev_tab"><tr><th>TempID</th><th>Name</th><th>ConnectorId</th><th>Zone</th><th>Bestätigen</th></tr></table></div></div>');
+			for (var i = 0; i < data.TmpDevices.length; i++) {
+				$('#overviewDiv_dev_tab').append(
+					'<tr class="overviewDiv_dev_tab_row">'
+					+ '<td class="overviewDiv_dev_tab_devId">' + data.TmpDevices[i].DeviceTmpId + '</td>'
+					+ '<td>' + data.TmpDevices[i].DeviceName + '</td>'
+					+ '<td>' + data.TmpDevices[i].ConnectorId + '</td>'
+					+ '<td class="overviewDiv_dev_tab_devZone">0</td>' // TODO auswahlliste mit allen zones
+					+ '<td><input class="confirm_temp" type="checkbox"></td>'
+					+ '</tr>'
+					);
+			}
+		} else {}
+		if (data.TmpDeviceComponents !== undefined && data.TmpDeviceComponents != null && data.TmpDeviceComponents.length > 0) {
+			isOneTmp = true;
+			$('#accordion_overview').append(
+					  '<div class="group"><h3>TmpDeviceComponents</h3><div class="deviceDiv" id="accordion_overview_deco">'
+					+ '<table id="overviewDiv_deco_tab">'
+					+ '<tr><th>TempID</th><th>DeviceId</th><th>ConnectorId</th><th>Name</th><th>Description</th><th>Actor</th><th>UnitId</th><th>New Name</th><th>Bestätigen</th></tr></table></div></div>');
+			for (var i = 0; i < data.TmpDeviceComponents.length; i++) {
+				$('#overviewDiv_deco_tab').append(
+					'<tr class="overviewDiv_deco_tab_row">'
+					+ '<td class="overviewDiv_deco_tab_decoId">' + data.TmpDeviceComponents[i].ComponentTmpId + '</td>'
+					+ '<td>' + data.TmpDeviceComponents[i].DeviceId + '</td>'
+					+ '<td>' + data.TmpDeviceComponents[i].ConnectorId + '</td>'
+					+ '<td>' + data.TmpDeviceComponents[i].Name + '</td>'
+					+ '<td>' + data.TmpDeviceComponents[i].Description + '</td>'
+					+ '<td>' + data.TmpDeviceComponents[i].Actor + '</td>'
+					+ '<td class="overviewDiv_deco_tab_unitId">0</td>' // TODO auswahlliste mit allen units
+					+ '<td class="overviewDiv_deco_tab_name">' + data.TmpDeviceComponents[i].Name + '</td>' // TODO eingabefeld für den Namen
+					+ '<td><input class="confirm_temp" type="checkbox"></td>'
+					+ '</tr>'
+					);
+			}
+		} else {}
+		$('#accordion_overview').accordion("refresh");
+		if (isOneTmp) {
+			$('#accordion_overview').append('<input id="btn_vonfirm_temps" type="submit" value="Temps bestätigen" />');
+			$('#btn_vonfirm_temps').button()
+				.click(function(event) {
+					event.preventDefault();
+					var confirmTemps = {TmpConnectors : [], TmpDevices : [], TmpDeviceComponents : []};
+					$('.overviewDiv_con_tab_row').each(function() {
+						if ($(this).find('.confirm_temp').prop('checked')) {
+							confirmTemps.TmpConnectors.push(parseInt($(this).find('.overviewDiv_con_tab_id').text()));
+						}
+					});
+					$('.overviewDiv_dev_tab_row').each(function() {
+						if ($(this).find('.confirm_temp').prop('checked')) {
+							confirmTemps.TmpDevices.push({
+								DeviceTmpId : parseInt($(this).find('.overviewDiv_dev_tab_devId').text()),
+								ZoneId : parseInt($(this).find('.overviewDiv_dev_tab_devZone').text())
+								});
+						}
+					});
+
+					$('.overviewDiv_deco_tab_row').each(function() {
+						if ($(this).find('.confirm_temp').prop('checked')) {
+							confirmTemps.TmpDeviceComponents.push({
+								ComponentTmpId : parseInt($(this).find('.overviewDiv_deco_tab_decoId').text()),
+								UnitID : parseInt($(this).find('.overviewDiv_deco_tab_unitId').text()),
+								Name : $(this).find('.overviewDiv_deco_tab_name').text()
+								});
+						}
+					});
+					console.log(confirmTemps);
+					socket.emit('confirmTemps', confirmTemps);
+				});
+		} else {
+			$('#accordion_overview').appen("Es gibt aktuell nichts temporäres zum Bestätigen");
+		}
+	});
 
 	socket.on("uiSendRules", function(data) {
 		$('#accordion_rules').empty();
@@ -153,6 +252,7 @@ $(document).ready(function () {
 		newRuleNr = ruleNr;
 		gotNewRuleNr = true;
 	});
+
 
 	var btn_deco_value_set = function(event, deviceId, deviceComponentId) {
 		event.preventDefault();
@@ -221,7 +321,6 @@ $(document).ready(function () {
 		$('#ruleDiv_' + ruleNr).append(createRuleDivInput(ruleNr, "Conditions", (rule !== null) ? escapeHtml(rule.Conditions) : ""));
 		$('#ruleDiv_' + ruleNr).append(createRuleDivInput(ruleNr, "Actions", (rule !== null) ? escapeHtml(rule.Actions) : ""));
 		$('#accordion_rules').accordion("refresh");
-		$('#accordion_rules').accordion({active:"h3:last"});
 		ruleNr++;
 	}
 

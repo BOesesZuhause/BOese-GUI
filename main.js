@@ -18,7 +18,7 @@ var connectors = {};
 var zones = {};
 var rules = {};
 var newRules = [];
-var temporaries = [];
+var temporaries = {TmpConnectors : [], TmpDevices : [], TmpDeviceComponents : []};
 var distributorConnection = null;
 
 var newRuleNr = 0;
@@ -50,7 +50,8 @@ io.on('connection', function(socket){
     });
 
     socket.on('confirmTemps', function(msg) {
-        // TODO
+        userUserConfirmTemps(distributorConnection, msg);
+        setTimeout(function(){ sendUserRequestTemps(distributorConnection); }, 3000);
     });
 
     socket.on('requestDevices', function(msg) {
@@ -176,13 +177,13 @@ client.on('connect', function(connection) {
                     break;
                 case 81: // UserSendTemps
                     if (obj.TmpConnectors) {
-                        temporaries[TmpConnectors] = obj.TmpConnectors;
+                        temporaries.TmpConnectors = obj.TmpConnectors;
                     } else {}
                     if (obj.TmpDevices) {
-                        temporaries[TmpDevices] = obj.TmpDevices;
+                        temporaries.TmpDevices = obj.TmpDevices;
                     } else {}
                     if (obj.TmpDeviceComponents) {
-                        temporaries[TmpDeviceComponents] = obj.TmpDeviceComponents;
+                        temporaries.TmpDeviceComponents = obj.TmpDeviceComponents;
                     } else {}
                     io.emit('uiSendTemps', temporaries);
                     break;
@@ -204,6 +205,20 @@ client.on('connect', function(connection) {
     });
     sendRequestConnection(connection);
 });
+
+var userUserConfirmTemps = function(connection, confirmedTemps) {
+    if (connection !== null) {
+        var reqConn = {Header : generateHeader(82),
+                        TmpConnectors : confirmedTemps.TmpConnectors,
+                        TmpDevices : confirmedTemps.TmpDevices,
+                        TmpDeviceComponents : confirmedTemps.TmpDeviceComponents
+                        };
+        if (connection.connected) {
+            connection.send(JSON.stringify(reqConn));
+        }
+        console.log(JSON.stringify(reqConn));
+    }
+}
 
 var sendUserRequestTemps = function(connection) {
     var reqConn = {Header : generateHeader(80)};
