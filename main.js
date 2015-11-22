@@ -18,10 +18,12 @@ var connectors = {};
 var zones = {};
 var rules = {};
 var newRules = [];
+var newZones = [];
 var temporaries = {TmpConnectors : [], TmpDevices : [], TmpDeviceComponents : []};
 var distributorConnection = null;
 
 var newRuleNr = 0;
+var newZoneNr = 0;
 
 
 storage.initSync({dir:'storageData/'});
@@ -50,7 +52,7 @@ io.on('connection', function(socket){
     });
 
     socket.on('confirmTemps', function(msg) {
-        userUserConfirmTemps(distributorConnection, msg);
+        sendUserConfirmTemps(distributorConnection, msg);
         setTimeout(function() { 
             sendUserRequestTemps(distributorConnection);
             sendUserRequestAllDevices(distributorConnection);
@@ -73,6 +75,10 @@ io.on('connection', function(socket){
         func(--newRuleNr);
     });
 
+    socket.on('requestNewZoneNr', function(func) {
+        func(--newZoneNr);
+    });
+
     socket.on('createNewRule', function(ruleList) {
         newRules = ruleList;
         sendUserCreateRules(distributorConnection, newRules);
@@ -84,6 +90,14 @@ io.on('connection', function(socket){
     socket.on('requestZones', function(msg) {
         socket.emit('uiSendZones', zones);
     });
+
+    socket.on('createNewZone', function(zoneList) {
+        newZones = zoneList;
+        sendUserCreateZones(distributorConnection, newZones);
+        setTimeout(function() {
+            sendUserRequestAllZones(distributorConnection);
+        }, 3000);
+    });
 });
 
 http.listen(3000, function(){
@@ -94,7 +108,8 @@ http.listen(3000, function(){
 
 // Websockets for Destributor
 
-client.connect('ws://localhost:8081/events/', null, null, null, null);
+// client.connect('ws://localhost:8081/events/', null, null, null, null);
+client.connect('ws://192.168.23.178:8081/events/', null, null, null, null);
 
 client.on('connectFailed', function(error) {
     console.log('Connect Error: ' + error.toString());
@@ -118,6 +133,9 @@ client.on('connect', function(connection) {
             console.log("Received: '" + message.utf8Data + "'");
             var obj = JSON.parse(message.utf8Data);
             switch(obj.Header.MessageType) {
+                case 120:
+                    userSendHartBeat(connection, obj.Header);
+                    break;
             	case 2:
                     console.log("Message 2: Confirm Connection");
                     console.log("PW: " + obj.Password);
@@ -189,13 +207,19 @@ client.on('connect', function(connection) {
                 case 81: // UserSendTemps
                     if (obj.TmpConnectors) {
                         temporaries.TmpConnectors = obj.TmpConnectors;
-                    } else {}
+                    } else {
+                        temporaries.TmpConnectors = [];
+                    }
                     if (obj.TmpDevices) {
                         temporaries.TmpDevices = obj.TmpDevices;
-                    } else {}
+                    } else {
+                        temporaries.TmpDevices = [];
+                    }
                     if (obj.TmpDeviceComponents) {
                         temporaries.TmpDeviceComponents = obj.TmpDeviceComponents;
-                    } else {}
+                    } else {
+                        temporaries.TmpDevices = [];
+                    }
                     io.emit('uiSendTemps', temporaries);
                     break;
                 case 91: // UserConfirmRules
@@ -210,6 +234,17 @@ client.on('connect', function(connection) {
                         sendUserRequestAllRules(connection);
                     }
                     break;
+                case 93: // UserConfirmZones
+                    if (obj.Zones) {
+                        for (var newZone in newZones) {
+                            for (var j = 0; j < obj.Zones.length; j++) {
+                                if (newZone.TempZoneId == obj.Zones.TempZoneId) {
+                                    newZones.splice(newZones.indexOf(newZone), 1);
+                                }
+                            }
+                        }
+                    }
+                    break;
             }
             
         }
@@ -217,7 +252,27 @@ client.on('connect', function(connection) {
     sendRequestConnection(connection);
 });
 
-var userUserConfirmTemps = function(connection, confirmedTemps) {
+var userSendHartBeat = function(connection, msg) {
+    if (connection !== null) {
+        if (connection.connected) {
+            connection.send(JSON.stringify(msg));
+        }
+    }
+}
+
+var sendUserCreateZones = function(connection, zoneList) {
+    if (connection !== null) {
+        var reqConn = {Header : generateHeader(92),
+                        Zones : zoneList
+                        };
+        if (connection.connected) {
+            connection.send(JSON.stringify(reqConn));
+        }
+        console.log(JSON.stringify(reqConn));
+    }
+}
+
+var sendUserConfirmTemps = function(connection, confirmedTemps) {
     if (connection !== null) {
         var reqConn = {Header : generateHeader(82),
                         TmpConnectors : confirmedTemps.TmpConnectors,

@@ -3,6 +3,7 @@ var accordionOptions = {header: "> div > h3", heightStyle: "content", collapsibl
 $(document).ready(function () {
 	var ruleNr = 0;
 	var newRuleNr = 0;
+	var newZoneNr = 0;
 	var gotNewRuleNr;
 	var zones = null;
 
@@ -121,9 +122,27 @@ $(document).ready(function () {
 					});
 		$('#btn_zone_add').button().click(function(event) {
 						event.preventDefault();
+						socket.emit('requestNewRuleNr', function (zoneNr) { 
+							newZoneNr = zoneNr;
+							$('#zone_tab').append(
+							'<tr class="neuZoneRow">' + 
+								'<td class="zoneInput_TempZone">' + newZoneNr + '</td>' +
+								'<td><input class="zoneInput_SuperZone" name="superZone_' + newZoneNr + '" value="0" /></td>' +
+								'<td><input class="zoneInput_ZoneName" name="zoneName_' + newZoneNr + '" value="Neue Zone" /></td>' +
+							'</tr>'
+							);
+						});
 					});
 		$('#btn_zone_save').button().click(function(event) {
 						event.preventDefault();
+						var zones = [];
+						$('.neuZoneRow').each(function() {
+							var tempZoneId = parseInt($(this).find('.zoneInput_TempZone').text());
+							var superZoneId = parseInt($(this).find('.zoneInput_SuperZone').text());
+							var zoneName = $(this).find('.zoneInput_ZoneName').text();
+							zones.push({ZoneId : -1, TempZoneId : tempZoneId, SuperZoneId : superZoneId, ZoneName : zoneName});
+						});
+						socket.emit('createNewZone', zones);
 					});
 	});
 
@@ -248,7 +267,7 @@ $(document).ready(function () {
 					socket.emit('confirmTemps', confirmTemps);
 				});
 		} else {
-			$('#accordion_overview').appen("Es gibt aktuell nichts temporäres zum Bestätigen");
+			$('#accordion_overview').append("Es gibt aktuell nichts temporäres zum Bestätigen");
 		}
 	});
 
@@ -265,7 +284,6 @@ $(document).ready(function () {
 	});
 
 	socket.on('uiSendZones', function(data) {
-		console.log(data);
 		zones = data;
 		$('#div_zone_tab').empty();
 		$('#div_zone_tab').html('<table id="zone_tab"><tr><th>ZoneId</th><th>SuperZoneId</th><th>ZoneName</th></tr></table>');
