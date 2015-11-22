@@ -134,7 +134,7 @@ client.on('connect', function(connection) {
             var obj = JSON.parse(message.utf8Data);
             switch(obj.Header.MessageType) {
                 case 120:
-                    userSendHartBeat(connection, obj.Header);
+                    userSendHartBeat(connection, obj);
                     break;
             	case 2:
                     console.log("Message 2: Confirm Connection");
