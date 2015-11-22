@@ -4,6 +4,7 @@ $(document).ready(function () {
 	var ruleNr = 0;
 	var newRuleNr = 0;
 	var gotNewRuleNr;
+	var zones = null;
 
 	$(function() {
 		$('body').css('background-color', '#D5D5D5');
@@ -14,7 +15,8 @@ $(document).ready(function () {
 		$('#tabs ul:first li:eq(2) a').text("Regeln");
 		$('#tabs ul:first li:eq(3) a').text("Benutzer");
 		$('#tabs ul:first li:eq(4) a').text("Zonen");
-		$('#tabs ul:first li:eq(5) a').text("Benachrichtigungen");
+		$('#tabs ul:first li:eq(5) a').text("Units");
+		$('#tabs ul:first li:eq(6) a').text("Benachrichtigungen");
 		$('#accordion').accordion({header: "> div > h3", heightStyle: "content", collapsible: true})
 					.sortable({
 						axis: "y",
@@ -117,9 +119,16 @@ $(document).ready(function () {
 						}
 						
 					});
-		
+		$('#btn_zone_add').button().click(function(event) {
+						event.preventDefault();
+					});
+		$('#btn_zone_save').button().click(function(event) {
+						event.preventDefault();
+					});
 	});
+
 	var socket = io();
+	socket.emit('requestZones', null);
 	socket.emit('requestRules', null);
 	socket.emit('requestDevices', null);
 	socket.emit('requestDeviceComponents', null);
@@ -175,10 +184,12 @@ $(document).ready(function () {
 					+ '<td class="overviewDiv_dev_tab_devId">' + data.TmpDevices[i].DeviceTmpId + '</td>'
 					+ '<td>' + data.TmpDevices[i].DeviceName + '</td>'
 					+ '<td>' + data.TmpDevices[i].ConnectorId + '</td>'
-					+ '<td class="overviewDiv_dev_tab_devZone">0</td>' // TODO auswahlliste mit allen zones
+					+ '<td class="overviewDiv_dev_tab_devZone" id="overviewDiv_dev_tab_devZone_' + data.TmpDevices[i].DeviceTmpId + '">0</td>' // TODO auswahlliste mit allen zones
 					+ '<td><input class="confirm_temp" type="checkbox"></td>'
 					+ '</tr>'
 					);
+				// $('overviewDiv_dev_tab_devZone_' + data.TmpDevices[i].DeviceTmpId).append(insertZoneSelectable());
+				// $('overviewDiv_dev_tab_devZone_' + data.TmpDevices[i].DeviceTmpId).selectmenu();
 			}
 		} else {}
 		if (data.TmpDeviceComponents !== undefined && data.TmpDeviceComponents != null && data.TmpDeviceComponents.length > 0) {
@@ -228,7 +239,7 @@ $(document).ready(function () {
 						if ($(this).find('.confirm_temp').prop('checked')) {
 							confirmTemps.TmpDeviceComponents.push({
 								ComponentTmpId : parseInt($(this).find('.overviewDiv_deco_tab_decoId').text()),
-								UnitID : parseInt($(this).find('.overviewDiv_deco_tab_unitId').text()),
+								UnitId : parseInt($(this).find('.overviewDiv_deco_tab_unitId').text()),
 								Name : $(this).find('.overviewDiv_deco_tab_name').text()
 								});
 						}
@@ -253,6 +264,31 @@ $(document).ready(function () {
 		gotNewRuleNr = true;
 	});
 
+	socket.on('uiSendZones', function(data) {
+		console.log(data);
+		zones = data;
+		$('#div_zone_tab').empty();
+		$('#div_zone_tab').html('<table id="zone_tab"><tr><th>ZoneId</th><th>SuperZoneId</th><th>ZoneName</th></tr></table>');
+		for (var i = 0; i < data.length; i++) {
+			$('#zone_tab').append(
+				'<tr>' + 
+					'<td>' + data[i].ZoneId + '</td>' +
+					'<td>' + data[i].SuperZoneId + '</td>' +
+					'<td>' + data[i].ZoneName + '</td>' +
+				'</tr>'
+				);
+		}
+	});
+
+	var insertZoneSelectable = function(element) {
+		var str = '<select name="zoneSelect" class="zoneSelect">';
+		if (zones != null){
+			for (var i = 0; i < zones.length; i++) {
+				str = str + '<option value="' + zones[i].ZoneId + '">' + zones[i].ZoneName + '</option>';
+			}
+		}
+		return str + '</select>';
+	}
 
 	var btn_deco_value_set = function(event, deviceId, deviceComponentId) {
 		event.preventDefault();

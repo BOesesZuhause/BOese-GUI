@@ -51,7 +51,10 @@ io.on('connection', function(socket){
 
     socket.on('confirmTemps', function(msg) {
         userUserConfirmTemps(distributorConnection, msg);
-        setTimeout(function(){ sendUserRequestTemps(distributorConnection); }, 3000);
+        setTimeout(function() { 
+            sendUserRequestTemps(distributorConnection);
+            sendUserRequestAllDevices(distributorConnection);
+        }, 3000);
     });
 
     socket.on('requestDevices', function(msg) {
@@ -73,6 +76,13 @@ io.on('connection', function(socket){
     socket.on('createNewRule', function(ruleList) {
         newRules = ruleList;
         sendUserCreateRules(distributorConnection, newRules);
+        setTimeout(function() {
+            sendUserRequestAllRules(distributorConnection);
+        }, 3000);
+    });
+
+    socket.on('requestZones', function(msg) {
+        socket.emit('uiSendZones', zones);
     });
 });
 
@@ -160,6 +170,7 @@ client.on('connect', function(connection) {
                     }
                     console.log("Received Zones");
                     console.log(zones);
+                    io.emit('uiSendZones', zones);
                     break;
                 case 60: // UserSendRules
                     if (obj.Rules) {
