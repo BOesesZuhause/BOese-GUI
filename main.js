@@ -19,11 +19,14 @@ var zones = {};
 var rules = {};
 var newRules = [];
 var newZones = [];
+var units = {};
+var newUnits = [];
 var temporaries = {TmpConnectors : [], TmpDevices : [], TmpDeviceComponents : []};
 var distributorConnection = null;
 
 var newRuleNr = 0;
 var newZoneNr = 0;
+var newUnitNr = 0;
 
 
 storage.initSync({dir:'storageData/'});
@@ -71,12 +74,20 @@ io.on('connection', function(socket){
         socket.emit('uiSendRules', rules);
     });
 
+    socket.on('requestUnits', function(msg) {
+        socket.emit('uiSendUnits', units);
+    });
+
     socket.on('requestNewRuleNr', function(func) {
         func(--newRuleNr);
     });
 
     socket.on('requestNewZoneNr', function(func) {
         func(--newZoneNr);
+    });
+
+    socket.on('requestNewUnitNr', function(func) {
+        func(--newUnitNr);
     });
 
     socket.on('createNewRule', function(ruleList) {
@@ -98,6 +109,17 @@ io.on('connection', function(socket){
             sendUserRequestAllZones(distributorConnection);
         }, 3000);
     });
+
+    socket.on('createNewUnit', function(unitList) {
+        newUnits = unitList;
+        sendUserCreateUnits(distributorConnection, unitList);
+        setTimeout(function() {
+            sendUserRequestAllUnits(distributorConnection);
+        }, 3000);
+    });
+    socket.on('request_reloadDistributorData', function(msg) {
+        sendUserRequestAllData(distributorConnection);
+    });
 });
 
 http.listen(3000, function(){
@@ -108,8 +130,8 @@ http.listen(3000, function(){
 
 // Websockets for Destributor
 
-// client.connect('ws://localhost:8081/events/', null, null, null, null);
-client.connect('ws://192.168.23.178:8081/events/', null, null, null, null);
+client.connect('ws://localhost:8081/events/', null, null, null, null);
+// client.connect('ws://192.168.23.178:8081/events/', null, null, null, null);
 
 client.on('connectFailed', function(error) {
     console.log('Connect Error: ' + error.toString());
@@ -130,24 +152,18 @@ client.on('connect', function(connection) {
 
     connection.on('message', function(message) {
         if (message.type === 'utf8') {
-            console.log("Received: '" + message.utf8Data + "'");
+            console.log("Received: ");
+            console.log(JSON.parse(message.utf8Data));
             var obj = JSON.parse(message.utf8Data);
             switch(obj.Header.MessageType) {
                 case 120:
                     userSendHartBeat(connection, obj);
                     break;
             	case 2:
-                    console.log("Message 2: Confirm Connection");
-                    console.log("PW: " + obj.Password);
-                    console.log("Con ID: " + obj.ConnectorId);
                     connector.id = obj.ConnectorId;
                     connector.pw = obj.Password;
                     storage.setItem("connector", connector);
-                    sendUserRequestAllDevices(connection);
-                    sendUserRequestAllConnectors(connection);
-                    sendUserRequestAllZones(connection);
-                    sendUserRequestAllRules(connection);
-                    sendUserRequestTemps(connection);
+                    sendUserRequestAllData(connection);
             		break;
                 case 51: // UserSendDevices
                     if (obj.Devices) {
@@ -179,15 +195,11 @@ client.on('connect', function(connection) {
                     if (obj.Connectors) {
                         connectors = obj.Connectors;
                     }
-                    console.log("Received Connectors:");
-                    console.log(connectors);
                     break; 
                 case 58: // UserSendZones
                     if (obj.Zones) {
                         zones = obj.Zones;
                     }
-                    console.log("Received Zones");
-                    console.log(zones);
                     io.emit('uiSendZones', zones);
                     break;
                 case 60: // UserSendRules
@@ -203,6 +215,20 @@ client.on('connect', function(connection) {
                         }  
                     }
                     io.emit("uiSendRules", rules);
+                    break;
+                case 62: // UserSendUnits
+                    if (obj.Units) {
+                        units = obj.Units;
+                    } else {
+                        units = [];
+                    }
+                    if (newUnits.length > 0) { // TODO show user incorrect rules
+                        for (var i = 0; i < newUnits.length; i++) {
+                            renameProperty(newUnits[i], "TempUniId", "UnitId");
+                            units.push(newUnits[i]);
+                        }  
+                    }
+                    io.emit('uiSendUnits', units);
                     break;
                 case 81: // UserSendTemps
                     if (obj.TmpConnectors) {
@@ -245,6 +271,17 @@ client.on('connect', function(connection) {
                         }
                     }
                     break;
+                case 95: // UserConfirmUnits
+                    if (obj.Units) {
+                        for (var newUnit in newUnits) {
+                            for (var j = 0; j < obj.Units.length; j++) {
+                                if (newUnit.TempZoneId == obj.Units.TempUnitId) {
+                                    newUnits.splice(newUnits.indexOf(newUnit), 1);
+                                }
+                            }
+                        }
+                    }
+                    break;
             }
             
         }
@@ -260,10 +297,31 @@ var userSendHartBeat = function(connection, msg) {
     }
 }
 
+var sendUserRequestAllData = function(connection) {
+    sendUserRequestAllDevices(connection);
+    sendUserRequestAllConnectors(connection);
+    sendUserRequestAllZones(connection);
+    sendUserRequestAllRules(connection);
+    sendUserRequestTemps(connection);
+    sendUserRequestAllUnits(connection);
+}
+
 var sendUserCreateZones = function(connection, zoneList) {
     if (connection !== null) {
         var reqConn = {Header : generateHeader(92),
                         Zones : zoneList
+                        };
+        if (connection.connected) {
+            connection.send(JSON.stringify(reqConn));
+        }
+        console.log(JSON.stringify(reqConn));
+    }
+}
+
+var sendUserCreateUnits = function(connection, unitList) {
+    if (connection !== null) {
+        var reqConn = {Header : generateHeader(94),
+                        Units : unitList
                         };
         if (connection.connected) {
             connection.send(JSON.stringify(reqConn));
@@ -287,9 +345,11 @@ var sendUserConfirmTemps = function(connection, confirmedTemps) {
 }
 
 var sendUserRequestTemps = function(connection) {
-    var reqConn = {Header : generateHeader(80)};
-    if (connection.connected) {
-        connection.send(JSON.stringify(reqConn));
+    if (connection !== null) {
+        var reqConn = {Header : generateHeader(80)};
+        if (connection.connected) {
+            connection.send(JSON.stringify(reqConn));
+        }
     }
 }
 
@@ -306,63 +366,88 @@ var sendUserCreateRules = function(connection, ruleList) {
 }
 
 var sendUserRequestAllRules = function(connection) {
-    var reqConn = {Header : generateHeader(59)};
-    if (connection.connected) {
-        connection.send(JSON.stringify(reqConn));
+    if (connection !== null) {
+        var reqConn = {Header : generateHeader(59)};
+        if (connection.connected) {
+            connection.send(JSON.stringify(reqConn));
+        }
     }
 } 
 
 var sendUserRequestAllZones = function(connection) {
-    var reqConn = {Header : generateHeader(57)};
-    if (connection.connected) {
-        connection.send(JSON.stringify(reqConn));
+    if (connection !== null) {
+        var reqConn = {Header : generateHeader(57)};
+        if (connection.connected) {
+            connection.send(JSON.stringify(reqConn));
+        }
     }
 } 
 
 var sendUserRequestAllConnectors = function(connection) {
-    var reqConn = {Header : generateHeader(55)};
-    if (connection.connected) {
-        connection.send(JSON.stringify(reqConn));
+    if (connection !== null) {
+        var reqConn = {Header : generateHeader(55)};
+        if (connection.connected) {
+            connection.send(JSON.stringify(reqConn));
+        }
     }
 } 
 
 var sendUserRequestConnectors = function(connection, connnectorIds) {
-    var reqConn = {Header : generateHeader(54),
-                    ConnectorIds : connnectorIds
-                    };
-    if (connection.connected) {
-        connection.send(JSON.stringify(reqConn));
+    if (connection !== null) {
+        var reqConn = {Header : generateHeader(54),
+                        ConnectorIds : connnectorIds
+                        };
+        if (connection.connected) {
+            connection.send(JSON.stringify(reqConn));
+        }
     }
 }
 
 var sendUserRequestDeviceComponents = function(connection, deviceIds) {
-    var reqConn = {Header : generateHeader(52),
-                    DeviceIds : deviceIds
-                    };
-    if (connection.connected) {
-        connection.send(JSON.stringify(reqConn));
+    if (connection !== null) {
+        var reqConn = {Header : generateHeader(52),
+                        DeviceIds : deviceIds
+                        };
+        if (connection.connected) {
+            connection.send(JSON.stringify(reqConn));
+        }
     }
 }
 
 var sendRequestConnection = function(connection) {
-    var reqConn = {Header : generateHeader(1),
-                    ConnectorName : "BoeseWebConnector",
-                    IsUserConnector : true
-                    };
-    if (connector.pw != null) {
-        reqConn.Password = connector.pw;
-    }
-    if (connection.connected) {
-        connection.send(JSON.stringify(reqConn));
+    if (connection !== null) {
+        var reqConn = {Header : generateHeader(1),
+                        ConnectorName : "BoeseWebConnector",
+                        IsUserConnector : true
+                        };
+        if (connector.pw != null) {
+            reqConn.Password = connector.pw;
+        }
+        if (connection.connected) {
+            connection.send(JSON.stringify(reqConn));
+        }
     }
 }
 
 var sendUserRequestAllDevices = function(connection) {
-    var reqConn = {Header : generateHeader(50),
-                    IsUserRequest : true
-                    };
-    if (connection.connected) {
-        connection.send(JSON.stringify(reqConn));
+    if (connection !== null) {
+        var reqConn = {Header : generateHeader(50),
+                        IsUserRequest : true
+                        };
+        if (connection.connected) {
+            connection.send(JSON.stringify(reqConn));
+        }
+    }
+}
+
+var sendUserRequestAllUnits = function(connection) {
+    if (connection !== null) {
+        var reqConn = {Header : generateHeader(61),
+                        IsUserRequest : true
+                        };
+        if (connection.connected) {
+            connection.send(JSON.stringify(reqConn));
+        }
     }
 }
 

@@ -4,8 +4,10 @@ $(document).ready(function () {
 	var ruleNr = 0;
 	var newRuleNr = 0;
 	var newZoneNr = 0;
+	var newUnitNr = 0;
 	var gotNewRuleNr;
 	var zones = null;
+	var units = null;
 
 	$(function() {
 		$('body').css('background-color', '#D5D5D5');
@@ -27,9 +29,13 @@ $(document).ready(function () {
 							$(this).accordion("refresh");
 						}
 					});
-		$('#accordion_overview').accordion(accordionOptions);
+		
 		$('#accordion_rules').accordion(accordionOptions);
-		$('#accordion_overview').accordion(accordionOptions);
+		$('#accordion_overview_temps').accordion(accordionOptions);
+		$('#btn_reload_distibutor_data').button().click(function(event) {
+						event.preventDefault();
+						socket.emit('request_reloadDistributorData', 1);
+					});
 		$('#btn_rule_add').button().click(function(event) {
 						event.preventDefault();
 						addRuleAccordion(null);
@@ -113,7 +119,6 @@ $(document).ready(function () {
 							}
 						}
 						if (!error) {
-							console.log(newRuleList);
 							socket.emit('createNewRule', newRuleList);
 						} else {
 							console.log("Error");
@@ -127,7 +132,7 @@ $(document).ready(function () {
 							$('#zone_tab').append(
 							'<tr class="neuZoneRow">' + 
 								'<td class="zoneInput_TempZone">' + newZoneNr + '</td>' +
-								'<td><input class="zoneInput_SuperZone" name="superZone_' + newZoneNr + '" value="0" /></td>' +
+								'<td><input class="zoneInput_SuperZone" name="superZone_' + newZoneNr + '" value="1" /></td>' +
 								'<td><input class="zoneInput_ZoneName" name="zoneName_' + newZoneNr + '" value="Neue Zone" /></td>' +
 							'</tr>'
 							);
@@ -138,16 +143,42 @@ $(document).ready(function () {
 						var zones = [];
 						$('.neuZoneRow').each(function() {
 							var tempZoneId = parseInt($(this).find('.zoneInput_TempZone').text());
-							var superZoneId = parseInt($(this).find('.zoneInput_SuperZone').text());
-							var zoneName = $(this).find('.zoneInput_ZoneName').text();
+							var superZoneId = parseInt($(this).find('.zoneInput_SuperZone').val());
+							var zoneName = $(this).find('.zoneInput_ZoneName').val();
 							zones.push({ZoneId : -1, TempZoneId : tempZoneId, SuperZoneId : superZoneId, ZoneName : zoneName});
 						});
 						socket.emit('createNewZone', zones);
+					});
+
+		$('#btn_unit_add').button().click(function(event) {
+						event.preventDefault();
+						socket.emit('requestNewUnitNr', function (unitNr) { 
+							newUnitNr = unitNr;
+							$('#unit_tab').append(
+							'<tr class="neuUnitRow">' + 
+								'<td class="unitInput_TempUnit">' + newUnitNr + '</td>' +
+								'<td><input class="unitInput_UnitName" name="unitName_' + newUnitNr + '" value="" /></td>' +
+								'<td><input class="unitInput_UnitSymbol" name="unitSymbol_' + newUnitNr + '" value="" /></td>' +
+							'</tr>'
+							);
+						});
+					});
+		$('#btn_unit_save').button().click(function(event) {
+						event.preventDefault();
+						var units = [];
+						$('.neuUnitRow').each(function() {
+							var tempUnitId = parseInt($(this).find('.unitInput_TempUnit').text());
+							var unitName = $(this).find('.unitInput_UnitName').val();
+							var unitSymbol = $(this).find('.unitInput_UnitSymbol').val();
+							units.push({UnitId : -1, TempUnitId : tempUnitId, UnitName : unitName, UnitSymbol : unitSymbol});
+						});
+						socket.emit('createNewUnit', units);
 					});
 	});
 
 	var socket = io();
 	socket.emit('requestZones', null);
+	socket.emit('requestUnits', null);
 	socket.emit('requestRules', null);
 	socket.emit('requestDevices', null);
 	socket.emit('requestDeviceComponents', null);
@@ -174,19 +205,21 @@ $(document).ready(function () {
 		//console.log(data);
 	});
 
+
 	socket.on('uiSendTemps', function(data) {
-		$('#accordion_overview').empty();
+		$('#accordion_overview_temps').empty();
 		var isOneTmp = false;	
 		if (data.TmpConnectors !== undefined && data.TmpConnectors != null && data.TmpConnectors.length > 0) {
 			isOneTmp = true;
-			$('#accordion_overview').append(
+			$('#accordion_overview_temps').append(
 					  '<div class="group"><h3>TempConnectors</h3><div class="deviceDiv" id="accordion_overview_con">'
-					+ '<table id="overviewDiv_con_tab"><tr><th>TempID</th><th>Name</th><th>Bestätigen</th></tr></table></div></div>');
+					+ '<table id="overviewDiv_con_tab"><tr><th>TempID</th><th>Name</th><th>IsUserConnector</th><th>Bestätigen</th></tr></table></div></div>');
 			for (var i = 0; i < data.TmpConnectors.length; i++) {
 				$('#overviewDiv_con_tab').append(
 					'<tr class="overviewDiv_con_tab_row">'
 					+ '<td  class="overviewDiv_con_tab_id">' + data.TmpConnectors[i].ConnectorTmpId + '</td>'
 					+ '<td>' + data.TmpConnectors[i].ConnectorName + '</td>'
+					+ '<td>' + data.TmpConnectors[i].IsUserConnector + '</td>'
 					+ '<td><input class="confirm_temp" type="checkbox"></td>'
 					+ '</tr>'
 					);
@@ -194,7 +227,12 @@ $(document).ready(function () {
 		} else {}
 		if (data.TmpDevices !== undefined && data.TmpDevices != null && data.TmpDevices.length > 0) {
 			isOneTmp = true;
-			$('#accordion_overview').append(
+			var zoneSelectStr = '<select name="zoneSelect" class="zoneSelect">';
+			for (var i = 0; i < zones.length; i++) {
+				zoneSelectStr = zoneSelectStr.concat('<option value="' + zones[i].ZoneId + '">'+ zones[i].ZoneName +'</option>');
+			}
+			zoneSelectStr = zoneSelectStr.concat('</select>');
+			$('#accordion_overview_temps').append(
 					  '<div class="group"><h3>TempDevices</h3><div class="deviceDiv" id="accordion_overview_dev">'
 					+ '<table id="overviewDiv_dev_tab"><tr><th>TempID</th><th>Name</th><th>ConnectorId</th><th>Zone</th><th>Bestätigen</th></tr></table></div></div>');
 			for (var i = 0; i < data.TmpDevices.length; i++) {
@@ -203,20 +241,26 @@ $(document).ready(function () {
 					+ '<td class="overviewDiv_dev_tab_devId">' + data.TmpDevices[i].DeviceTmpId + '</td>'
 					+ '<td>' + data.TmpDevices[i].DeviceName + '</td>'
 					+ '<td>' + data.TmpDevices[i].ConnectorId + '</td>'
-					+ '<td class="overviewDiv_dev_tab_devZone" id="overviewDiv_dev_tab_devZone_' + data.TmpDevices[i].DeviceTmpId + '">0</td>' // TODO auswahlliste mit allen zones
+					+ '<td class="overviewDiv_dev_tab_devZone" id="overviewDiv_dev_tab_devZone_' + data.TmpDevices[i].DeviceTmpId + '">' + zoneSelectStr + '</td>' // TODO auswahlliste mit allen zones
 					+ '<td><input class="confirm_temp" type="checkbox"></td>'
 					+ '</tr>'
 					);
+				$('.zoneSelect').selectmenu();
 				// $('overviewDiv_dev_tab_devZone_' + data.TmpDevices[i].DeviceTmpId).append(insertZoneSelectable());
 				// $('overviewDiv_dev_tab_devZone_' + data.TmpDevices[i].DeviceTmpId).selectmenu();
 			}
 		} else {}
 		if (data.TmpDeviceComponents !== undefined && data.TmpDeviceComponents != null && data.TmpDeviceComponents.length > 0) {
 			isOneTmp = true;
-			$('#accordion_overview').append(
+			var unitSelectStr = '<select name="unitSelect" class="unitSelect">';
+			for (var i = 0; i < units.length; i++) {
+				unitSelectStr = unitSelectStr.concat('<option value="' + units[i].UnitId + '">'+ units[i].UnitName +'</option>');
+			}
+			unitSelectStr = unitSelectStr.concat('</select>');
+			$('#accordion_overview_temps').append(
 					  '<div class="group"><h3>TmpDeviceComponents</h3><div class="deviceDiv" id="accordion_overview_deco">'
 					+ '<table id="overviewDiv_deco_tab">'
-					+ '<tr><th>TempID</th><th>DeviceId</th><th>ConnectorId</th><th>Name</th><th>Description</th><th>Actor</th><th>UnitId</th><th>New Name</th><th>Bestätigen</th></tr></table></div></div>');
+					+ '<tr><th>TempID</th><th>DeviceId</th><th>ConnectorId</th><th>Name</th><th>Description</th><th>Actor</th><th>Unit</th><th>UnitId</th><th>New Name</th><th>Bestätigen</th></tr></table></div></div>');
 			for (var i = 0; i < data.TmpDeviceComponents.length; i++) {
 				$('#overviewDiv_deco_tab').append(
 					'<tr class="overviewDiv_deco_tab_row">'
@@ -226,16 +270,17 @@ $(document).ready(function () {
 					+ '<td>' + data.TmpDeviceComponents[i].Name + '</td>'
 					+ '<td>' + data.TmpDeviceComponents[i].Description + '</td>'
 					+ '<td>' + data.TmpDeviceComponents[i].Actor + '</td>'
-					+ '<td class="overviewDiv_deco_tab_unitId">0</td>' // TODO auswahlliste mit allen units
-					+ '<td class="overviewDiv_deco_tab_name">' + data.TmpDeviceComponents[i].Name + '</td>' // TODO eingabefeld für den Namen
+					+ '<td>' + data.TmpDeviceComponents[i].Unit + '</td>'
+					+ '<td class="overviewDiv_deco_tab_unitId">' + unitSelectStr + '</td>' // TODO auswahlliste mit allen units
+					+ '<td><input class="overviewDiv_deco_tab_name" value="' + data.TmpDeviceComponents[i].Name + '" /></td>' // TODO eingabefeld für den Namen
 					+ '<td><input class="confirm_temp" type="checkbox"></td>'
 					+ '</tr>'
 					);
 			}
 		} else {}
-		$('#accordion_overview').accordion("refresh");
+		$('#accordion_overview_temps').accordion("refresh");
 		if (isOneTmp) {
-			$('#accordion_overview').append('<input id="btn_vonfirm_temps" type="submit" value="Temps bestätigen" />');
+			$('#accordion_overview_temps').append('<input id="btn_vonfirm_temps" type="submit" value="Temps bestätigen" />');
 			$('#btn_vonfirm_temps').button()
 				.click(function(event) {
 					event.preventDefault();
@@ -249,7 +294,7 @@ $(document).ready(function () {
 						if ($(this).find('.confirm_temp').prop('checked')) {
 							confirmTemps.TmpDevices.push({
 								DeviceTmpId : parseInt($(this).find('.overviewDiv_dev_tab_devId').text()),
-								ZoneId : parseInt($(this).find('.overviewDiv_dev_tab_devZone').text())
+								ZoneId : parseInt($(this).find('.zoneSelect').val())
 								});
 						}
 					});
@@ -258,16 +303,15 @@ $(document).ready(function () {
 						if ($(this).find('.confirm_temp').prop('checked')) {
 							confirmTemps.TmpDeviceComponents.push({
 								ComponentTmpId : parseInt($(this).find('.overviewDiv_deco_tab_decoId').text()),
-								UnitId : parseInt($(this).find('.overviewDiv_deco_tab_unitId').text()),
-								Name : $(this).find('.overviewDiv_deco_tab_name').text()
+								UnitId : parseInt($(this).find('.unitSelect').val()),
+								Name : $(this).find('.overviewDiv_deco_tab_name').val()
 								});
 						}
 					});
-					console.log(confirmTemps);
 					socket.emit('confirmTemps', confirmTemps);
 				});
 		} else {
-			$('#accordion_overview').append("Es gibt aktuell nichts temporäres zum Bestätigen");
+			$('#accordion_overview_temps').append("Es gibt aktuell nichts temporäres zum Bestätigen");
 		}
 	});
 
@@ -298,6 +342,21 @@ $(document).ready(function () {
 		}
 	});
 
+	socket.on('uiSendUnits', function(data) {
+		units = data;
+		$('#div_unit_tab').empty();
+		$('#div_unit_tab').html('<table id="unit_tab"><tr><th>UnitId</th><th>UnitName</th><th>UnitSymbol</th></tr></table>');
+		for (var i = 0; i < data.length; i++) {
+			$('#unit_tab').append(
+				'<tr>' + 
+					'<td>' + data[i].UnitId + '</td>' +
+					'<td>' + data[i].UnitName + '</td>' +
+					'<td>' + data[i].UnitSymbol + '</td>' +
+				'</tr>'
+				);
+		}
+	});
+
 	var insertZoneSelectable = function(element) {
 		var str = '<select name="zoneSelect" class="zoneSelect">';
 		if (zones != null){
@@ -318,23 +377,24 @@ $(document).ready(function () {
 						+ '</h3><div class="deviceComponentDiv" id="deviceComponentDiv_' 
 						+ deCo.DeviceComponentId 
 						+ '"></div></div>');
-		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "ComponentID", deCo.DeviceComponentId));
-		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Description", deCo.Description));
-		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Name", deCo.ComponentName));
-		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Value", deCo.Value));
-		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Value_Timestamp", deCo.Timestamp));
-		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Status", deCo.Status));
-		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "IsActor", deCo.Actor));
-		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Unit", deCo.Unit));
+		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "ComponentID", deCo.DeviceComponentId, false));
+		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Description", deCo.Description, false));
+		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Name", deCo.ComponentName, false));
+		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Value", deCo.Value, true));
+		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Value_Timestamp", deCo.Timestamp, false));
+		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Status", deCo.Status, false));
+		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "IsActor", deCo.Actor, false));
+		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Unit", deCo.Unit, false));
 		if (deCo.Actor) {
 			$('#deviceComponentDiv_' + deCo.DeviceComponentId).append('<input type="submit" id="btn_deco_value_set_' + deviceId + '_' + deCo.DeviceComponentId + '" value="Value setzen">');
 			$('#btn_deco_value_set_' + deviceId + '_' + deCo.DeviceComponentId).button().click(btn_deco_value_set(event, deviceId, deCo.DeviceComponentId));
 		}
 	}
 
-	var createDeviceCompDivInput = function(deviceNr, deviceComponentNr, text, content) {
+	var createDeviceCompDivInput = function(deviceNr, deviceComponentNr, text, content, isInput) {
 		return '<label class="lbl_DeviceInput" for="deviceComponentOutInp_' + deviceNr + '_' + deviceComponentNr + '_' + text + '">' + text + '</label>'
-				+ '<input class="deviceOutInput" name="' + text + '" id="deviceComponentOutInp_' + deviceNr + '_' + deviceComponentNr + '_' + text + '" value="' + content + '" /><br />';
+				+ (!isInput ? '<span class="deviceOutInput" name="' + text + '" id="deviceComponentOutInp_' + deviceNr + '_' + deviceComponentNr + '_' + text + '">' + content + '</span><br />' 
+					: '<input class="deviceOutInput" name="' + text + '" id="deviceComponentOutInp_' + deviceNr + '_' + deviceComponentNr + '_' + text + '" value="' + content + '" /><br />');
 	}
 
 	var addDeviceAccordion = function(device) {
