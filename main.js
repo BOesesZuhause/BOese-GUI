@@ -14,12 +14,12 @@ var deviceIdArray = [];
 var connectorIdArray = [];
 var deviceList = [];
 var deviceComponentList = [];
-var connectors = {};
-var zones = {};
-var rules = {};
+var connectors = [];
+var zones = [];
+var rules = [];
 var newRules = [];
 var newZones = [];
-var units = {};
+var units = [];
 var newUnits = [];
 var temporaries = {TmpConnectors : [], TmpDevices : [], TmpDeviceComponents : []};
 var distributorConnection = null;
@@ -117,8 +117,13 @@ io.on('connection', function(socket){
             sendUserRequestAllUnits(distributorConnection);
         }, 3000);
     });
+
     socket.on('request_reloadDistributorData', function(msg) {
         sendUserRequestAllData(distributorConnection);
+    });
+
+    socket.on('userSendValue', function(msg) {
+        sendUserSendValue(distributorConnection, msg);
     });
 });
 
@@ -165,11 +170,26 @@ client.on('connect', function(connection) {
                     storage.setItem("connector", connector);
                     sendUserRequestAllData(connection);
             		break;
+                case 9: // SendValue
+                    if (obj.DeviceId && obj.DeviceComponentId && obj.Value && obj.Timestamp) {
+                        for (var i = 0; i < deviceComponentList.length; i++) {
+                            if (deviceComponentList[i].DeviceId == obj.DeviceId) {
+                                deviceComponentList[i].DeviceComponents.Value = obj.Value;
+                                deviceComponentList[i].DeviceComponents.Timestamp = obj.Timestamp;
+                            }
+                        }
+                        io.emit('uiSendDeviceComponents', deviceComponentList);
+                    }
+                    break;
+                case 10: // ConfirmValue
+                    // TODO whatever?? will be called if this connector sends a value that is valid
+                    break;
                 case 51: // UserSendDevices
                     if (obj.Devices) {
-                        deviceList = obj.Devices;
+                        for (var i = 0; i < obj.Devices.length; i++) {
+                            addToObjectArray(deviceList, "DeviceId", obj.Devices[i]);
+                        }
                     }
-                    //console.log(deviceList);
                     for (key in deviceList) {
                         deviceIdArray.push(deviceList[key].DeviceId);
                         if (!(deviceList[key].ConnectorId in connectorIdArray)) {
@@ -186,8 +206,20 @@ client.on('connect', function(connection) {
                         devId = obj.DeviceId;
                         deCo = obj.Components;
                     }
-                    if (typeof deCo !== 'undefined' && deCo) {
-                        deviceComponentList.push({'DeviceId' : devId, 'DeviceComponents' : deCo});
+                    if (typeof deCo !== 'undefined' && deCo && deCo.length > 0) {
+                        var deCoObj = {'DeviceId' : devId, 'DeviceComponents' : deCo};
+                        var foundDevice = false;
+                        for (var i = 0; i < deviceComponentList.length; i++) {
+                            if (deviceComponentList[i].DeviceId == devId) {
+                                foundDevice = true;
+                                for (var j = 0; j < deCo.length; j++) {
+                                    addToObjectArray(deviceComponentList[i].DeviceComponents, 'DeviceComponentId', deCo[j]);
+                                }
+                            }
+                        }
+                        if (!foundDevice) {
+                            addToObjectArray(deviceComponentList, 'DeviceId', deCoObj);
+                        }
                     }
                     io.emit('uiSendDeviceComponents', deviceComponentList);
                     break;
@@ -289,10 +321,26 @@ client.on('connect', function(connection) {
     sendRequestConnection(connection);
 });
 
+var sendUserSendValue = function(connection, msg) {
+    if (connection !== null) {
+        var reqConn = {Header : generateHeader(9),
+                        DeviceId : msg.DeviceId,
+                        DeviceComponentId : msg.DeviceComponentId,
+                        Value : msg.Value,
+                        Timestamp : msg.Timestamp
+                        };
+        if (connection.connected) {
+            connection.send(JSON.stringify(reqConn));
+            console.log(JSON.stringify(reqConn));
+        }
+    }
+}
+
 var userSendHartBeat = function(connection, msg) {
     if (connection !== null) {
         if (connection.connected) {
             connection.send(JSON.stringify(msg));
+            console.log(JSON.stringify(msg));
         }
     }
 }
@@ -313,8 +361,8 @@ var sendUserCreateZones = function(connection, zoneList) {
                         };
         if (connection.connected) {
             connection.send(JSON.stringify(reqConn));
+            console.log(JSON.stringify(reqConn));
         }
-        console.log(JSON.stringify(reqConn));
     }
 }
 
@@ -325,8 +373,8 @@ var sendUserCreateUnits = function(connection, unitList) {
                         };
         if (connection.connected) {
             connection.send(JSON.stringify(reqConn));
+            console.log(JSON.stringify(reqConn));
         }
-        console.log(JSON.stringify(reqConn));
     }
 }
 
@@ -339,8 +387,8 @@ var sendUserConfirmTemps = function(connection, confirmedTemps) {
                         };
         if (connection.connected) {
             connection.send(JSON.stringify(reqConn));
+            console.log(JSON.stringify(reqConn));
         }
-        console.log(JSON.stringify(reqConn));
     }
 }
 
@@ -349,6 +397,7 @@ var sendUserRequestTemps = function(connection) {
         var reqConn = {Header : generateHeader(80)};
         if (connection.connected) {
             connection.send(JSON.stringify(reqConn));
+            console.log(JSON.stringify(reqConn));
         }
     }
 }
@@ -360,8 +409,8 @@ var sendUserCreateRules = function(connection, ruleList) {
                         };
         if (connection.connected) {
             connection.send(JSON.stringify(reqConn));
+            console.log(JSON.stringify(reqConn));
         }
-        console.log(JSON.stringify(reqConn));
     }
 }
 
@@ -370,6 +419,7 @@ var sendUserRequestAllRules = function(connection) {
         var reqConn = {Header : generateHeader(59)};
         if (connection.connected) {
             connection.send(JSON.stringify(reqConn));
+            console.log(JSON.stringify(reqConn));
         }
     }
 } 
@@ -379,6 +429,7 @@ var sendUserRequestAllZones = function(connection) {
         var reqConn = {Header : generateHeader(57)};
         if (connection.connected) {
             connection.send(JSON.stringify(reqConn));
+            console.log(JSON.stringify(reqConn));
         }
     }
 } 
@@ -388,6 +439,7 @@ var sendUserRequestAllConnectors = function(connection) {
         var reqConn = {Header : generateHeader(55)};
         if (connection.connected) {
             connection.send(JSON.stringify(reqConn));
+            console.log(JSON.stringify(reqConn));
         }
     }
 } 
@@ -399,6 +451,7 @@ var sendUserRequestConnectors = function(connection, connnectorIds) {
                         };
         if (connection.connected) {
             connection.send(JSON.stringify(reqConn));
+            console.log(JSON.stringify(reqConn));
         }
     }
 }
@@ -410,6 +463,7 @@ var sendUserRequestDeviceComponents = function(connection, deviceIds) {
                         };
         if (connection.connected) {
             connection.send(JSON.stringify(reqConn));
+            console.log(JSON.stringify(reqConn));
         }
     }
 }
@@ -425,6 +479,7 @@ var sendRequestConnection = function(connection) {
         }
         if (connection.connected) {
             connection.send(JSON.stringify(reqConn));
+            console.log(JSON.stringify(reqConn));
         }
     }
 }
@@ -436,6 +491,7 @@ var sendUserRequestAllDevices = function(connection) {
                         };
         if (connection.connected) {
             connection.send(JSON.stringify(reqConn));
+            console.log(JSON.stringify(reqConn));
         }
     }
 }
@@ -447,6 +503,7 @@ var sendUserRequestAllUnits = function(connection) {
                         };
         if (connection.connected) {
             connection.send(JSON.stringify(reqConn));
+            console.log(JSON.stringify(reqConn));
         }
     }
 }
@@ -471,3 +528,16 @@ var renameProperty = function (object, oldName, newName) {
     }
     return object;
 };
+
+var addToObjectArray = function (array, key, newObject) {
+    var replace = false;
+    for (var i = 0; i < array.length; i++) {
+        if (array[i][key] == newObject[key]) {
+            replace = true;
+            array[i] = newObject;
+        }
+    }
+    if (!replace) {
+        array.push(newObject);
+    }
+}

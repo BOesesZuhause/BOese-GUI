@@ -192,6 +192,7 @@ $(document).ready(function () {
 	});
 
 	socket.on('uiSendDeviceComponents', function(data) {
+		// console.log(data);
 		for (var i = 0; i < data.length; i++) {
 			var devId = data[i].DeviceId;
 			var deCos = data[i].DeviceComponents;
@@ -202,7 +203,6 @@ $(document).ready(function () {
 			$('#deviceDiv_' + devId + '_accordion').accordion("refresh");
 			
 		}
-		//console.log(data);
 	});
 
 
@@ -369,6 +369,13 @@ $(document).ready(function () {
 
 	var btn_deco_value_set = function(event, deviceId, deviceComponentId) {
 		event.preventDefault();
+		var val = $('#deviceComponentOutInp_' + deviceId + '_' + deviceComponentId + '_Value').val();
+		var sendValue = {	DeviceId : deviceId, 
+							DeviceComponentId : deviceComponentId,
+							Value : parseFloat(val),
+							Timestamp : new Date().getTime()
+						}
+		socket.emit('userSendValue', sendValue);
 	}
 
 	var addDeviceComponentAccordion = function(deviceId, deCo) {
@@ -385,10 +392,12 @@ $(document).ready(function () {
 		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Status", deCo.Status, false));
 		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "IsActor", deCo.Actor, false));
 		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Unit", deCo.Unit, false));
-		if (deCo.Actor) {
+		// if (deCo.Actor) {
 			$('#deviceComponentDiv_' + deCo.DeviceComponentId).append('<input type="submit" id="btn_deco_value_set_' + deviceId + '_' + deCo.DeviceComponentId + '" value="Value setzen">');
-			$('#btn_deco_value_set_' + deviceId + '_' + deCo.DeviceComponentId).button().click(btn_deco_value_set(event, deviceId, deCo.DeviceComponentId));
-		}
+			$('#btn_deco_value_set_' + deviceId + '_' + deCo.DeviceComponentId).button().click(function(event) {
+				btn_deco_value_set(event, deviceId, deCo.DeviceComponentId);
+			});
+		// }
 	}
 
 	var createDeviceCompDivInput = function(deviceNr, deviceComponentNr, text, content, isInput) {
