@@ -23,6 +23,7 @@ var units = [];
 var newUnits = [];
 var temporaries = {TmpConnectors : [], TmpDevices : [], TmpDeviceComponents : []};
 var distributorConnection = null;
+var statusList = [];
 
 var newRuleNr = 0;
 var newZoneNr = 0;
@@ -125,6 +126,10 @@ io.on('connection', function(socket){
     socket.on('userSendValue', function(msg) {
         sendUserSendValue(distributorConnection, msg);
     });
+
+    socket.on('requestStatusList', function(msg) {
+        socket.emit('uiSendStatusList', statusList);
+    });
 });
 
 http.listen(3000, function(){
@@ -184,6 +189,12 @@ client.on('connect', function(connection) {
                 case 10: // ConfirmValue
                     // TODO whatever?? will be called if this connector sends a value that is valid
                     break;
+                case 13: // SendStatus
+                    if (obj.DeviceComponentId && obj.StatusCode) {
+                        statusList.push({DeviceComponentId : obj.DeviceComponentId, StatusCode : obj.StatusCode, Timestamp : obj.Timestamp});
+                        io.emit('uiSendStatusList', statusList);
+                    }
+                    break; 
                 case 51: // UserSendDevices
                     if (obj.Devices) {
                         for (var i = 0; i < obj.Devices.length; i++) {

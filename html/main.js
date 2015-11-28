@@ -1,4 +1,15 @@
 var accordionOptions = {header: "> div > h3", heightStyle: "content", collapsible: true};
+var STATUSARRAY = [];
+STATUSARRAY[-1] = 'NO_STATUS';
+STATUSARRAY[1] = 'ACTIVE';
+STATUSARRAY[2] = 'INACTIVE';
+STATUSARRAY[3] = 'DEFECT';
+STATUSARRAY[4] = 'UNAVAILABLE';
+STATUSARRAY[5] = 'COMMUNICATION_FAILURE';
+STATUSARRAY[6] = 'UNKNOWN';
+STATUSARRAY[7] = 'DELETED';
+STATUSARRAY[100] = 'BATTERY';
+STATUSARRAY[110] = 'ACTOR_DOES_NOT_REACT';
 
 $(document).ready(function () {
 	var ruleNr = 0;
@@ -183,6 +194,15 @@ $(document).ready(function () {
 	socket.emit('requestDevices', null);
 	socket.emit('requestDeviceComponents', null);
 	socket.emit('requestTemps', null);
+
+	socket.emit('uiSendStatusList', function(data) {
+		$('#tab_notification').empty();
+		$('#tab_notification').append('<table id="notification_table"></table>');
+		$('#notification_table').append('<tr><th>Time</th><th>DeviceComponentId</th><th>StatusCode</th><th>StatusNachricht</th></tr>');
+		for (var i = 0; i < data.length; i++) {
+			$('#notification_table').append('<tr><td>' + getDateTime(new Date(data[i].Timestamp)) + '</td><td>' + data[i].DeviceComponentId + '</td><td>' + STATUSARRAY[data[i].StatusCode] + '</td></tr>');
+		}
+	});
 
 	socket.on('uiSendDevices', function(data) {
 		$('#accordion').empty();
@@ -388,8 +408,8 @@ $(document).ready(function () {
 		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Description", deCo.Description, false));
 		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Name", deCo.ComponentName, false));
 		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Value", deCo.Value, true));
-		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Value_Timestamp", deCo.Timestamp, false));
-		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Status", deCo.Status, false));
+		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Value_Timestamp", getDateTime(new Date(deCo.Timestamp)), false));
+		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Status", deCo.Status + ': ' + STATUSARRAY[deCo.Status], false));
 		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "IsActor", deCo.Actor, false));
 		$('#deviceComponentDiv_' + deCo.DeviceComponentId).append(createDeviceCompDivInput(deviceId, deCo.DeviceComponentId, "Unit", deCo.Unit, false));
 		// if (deCo.Actor) {
