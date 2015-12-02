@@ -13,10 +13,11 @@ STATUSARRAY[110] = 'ACTOR_DOES_NOT_REACT';
 
 $(document).ready(function () {
 	var ruleNr = 0;
+	var repeatRuleNr = 0;
 	var newRuleNr = 0;
+	var newRepeatRuleNr = 0;
 	var newZoneNr = 0;
 	var newUnitNr = 0;
-	var gotNewRuleNr;
 	var zones = null;
 	var units = null;
 
@@ -41,11 +42,43 @@ $(document).ready(function () {
 						}
 					});
 		
+		$('#accordion_repeat_rules').accordion(accordionOptions);
 		$('#accordion_rules').accordion(accordionOptions);
 		$('#accordion_overview_temps').accordion(accordionOptions);
 		$('#btn_reload_distibutor_data').button().click(function(event) {
 						event.preventDefault();
 						socket.emit('request_reloadDistributorData', 1);
+					});
+		$('#btn_repeat_rule_add').button().click(function(event) {
+						event.preventDefault();
+						addRepeatRuleAccordion(null);
+						$('#accordion_repeat_rules').accordion("refresh");
+					});
+		$('#btn_repeat_rule_save').button().click(function(event) {
+						event.preventDefault();
+						var newRepeatRuleList = [];
+						$('.repeatRuleDiv').each(function() {
+							var repeatRuleId = parseInt($(this).find('.RepeatRuleId').val());
+							if (repeatRuleId < 0) { // new repeat rule
+								var tempRepeatRuleId = repeatRuleId;
+								repeatRuleId = -1;
+								var cronString = $(this).find('.CronString').val();
+								var repeatsAfterEnd = parseInt($(this).find('.RepeatsAfterEnd').val());
+								var value = parseFloat($(this).find('.Value').val());
+								var ruleId = parseInt($(this).find('.RuleId').val());
+								var deviceComponentId = parseInt($(this).find('.DeviceComponentId').val());
+								newRepeatRuleList.push({
+									RepeatRuleId : repeatRuleId,
+									TempRepeatRuleId : tempRepeatRuleId,
+									CronString : cronString,
+									RepeatsAfterEnd : repeatsAfterEnd,
+									Value : value,
+									RuleId : ruleId,
+									DeviceComponentId : deviceComponentId
+								});
+							}
+						});
+						socket.emit('createNewRepeatRule', newRepeatRuleList);
 					});
 		$('#btn_rule_add').button().click(function(event) {
 						event.preventDefault();
@@ -191,6 +224,7 @@ $(document).ready(function () {
 	socket.emit('requestZones', null);
 	socket.emit('requestUnits', null);
 	socket.emit('requestRules', null);
+	socket.emit('requestRepeatRules', null);
 	socket.emit('requestDevices', null);
 	socket.emit('requestDeviceComponents', null);
 	socket.emit('requestTemps', null);
@@ -224,7 +258,6 @@ $(document).ready(function () {
 			
 		}
 	});
-
 
 	socket.on('uiSendTemps', function(data) {
 		$('#accordion_overview_temps').empty();
@@ -265,7 +298,7 @@ $(document).ready(function () {
 					+ '<td><input class="confirm_temp" type="checkbox"></td>'
 					+ '</tr>'
 					);
-				$('.zoneSelect').selectmenu();
+				//$('.zoneSelect').selectmenu();
 				// $('overviewDiv_dev_tab_devZone_' + data.TmpDevices[i].DeviceTmpId).append(insertZoneSelectable());
 				// $('overviewDiv_dev_tab_devZone_' + data.TmpDevices[i].DeviceTmpId).selectmenu();
 			}
@@ -335,16 +368,18 @@ $(document).ready(function () {
 		}
 	});
 
+	socket.on("uiSendRepeatRules", function(data) {
+		$('#accordion_repeat_rules').empty();
+		for (var i = 0; i < data.length; i++) {
+			addRepeatRuleAccordion(data[i]);
+		}
+	});
+
 	socket.on("uiSendRules", function(data) {
 		$('#accordion_rules').empty();
 		for (var i = 0; i < data.length; i++) {
 			addRuleAccordion(data[i]);
 		}
-	});
-
-	socket.on('uiSendNewRuleNr', function(ruleNr) {
-		newRuleNr = ruleNr;
-		gotNewRuleNr = true;
 	});
 
 	socket.on('uiSendZones', function(data) {
@@ -440,9 +475,20 @@ $(document).ready(function () {
 				+ '<input class="deviceOutInput" name="' + text + '" id="deviceOutInp_' + deviceNr + '_' + text + '" value="' + content + '" /><br />';
 	}
 
+	var addRepeatRuleAccordion = function(rule) {
+		if (rule == null) {
+			var date = new Date();
+			socket.emit('requestNewRepeatRuleNr', function (repeatRuleNr) { 
+				newRepeatRuleNr = repeatRuleNr;
+				addRepeatRuleAccordionHTML(null);
+			});
+		} else {
+			addRepeatRuleAccordionHTML(rule);
+		}
+	}
+
 	var addRuleAccordion = function(rule) {
 		if (rule == null) {
-			gotNewRuleNr = false;
 			var date = new Date();
 			socket.emit('requestNewRuleNr', function (ruleNr) { 
 				newRuleNr = ruleNr;
@@ -454,9 +500,26 @@ $(document).ready(function () {
 		
 	}
 
+	var addRepeatRuleAccordionHTML = function(rule) {
+		$('#accordion_repeat_rules').append('<div class="group"><h3>Rule ' + ((rule !== null) ? rule.RepeatRuleId : "New") + ' </h3><div class="repeatRuleDiv" id="repeatRuleDiv_' + repeatRuleNr + '"></div></div>');
+		$('#repeatRuleDiv_' + repeatRuleNr).append('<input type="hidden" class="RepeatRuleId" name="RepeatRuleId" value="' + ((rule !== null) ? rule.RepeatRuleId : newRepeatRuleNr) + '">');
+		$('#repeatRuleDiv_' + repeatRuleNr).append(createRepeatRuleDivInput(repeatRuleNr, "CronString", (rule !== null) ? rule.CronString : ""));
+		$('#repeatRuleDiv_' + repeatRuleNr).append(createRepeatRuleDivInput(repeatRuleNr, "RepeatsAfterEnd", (rule !== null) ? rule.RepeatsAfterEnd : ""));
+		$('#repeatRuleDiv_' + repeatRuleNr).append(createRepeatRuleDivInput(repeatRuleNr, "Value", (rule !== null) ? rule.Value : ""));
+		$('#repeatRuleDiv_' + repeatRuleNr).append(createRepeatRuleDivInput(repeatRuleNr, "RuleId", (rule !== null) ? rule.RuleId : ""));
+		$('#repeatRuleDiv_' + repeatRuleNr).append(createRepeatRuleDivInput(repeatRuleNr, "DeviceComponentId", (rule !== null) ? rule.DeviceComponentId : ""));
+		$('#accordion_repeat_rules').accordion("refresh");
+		repeatRuleNr++;
+	}
+
+	var createRepeatRuleDivInput = function(ruleNr, text, content) {
+		return '<label class="lbl_RuleInput" for="repeatRuleOutInp_' + ruleNr + '_' + text + '">' + text + '</label>'
+				+ '<input class="ruleOutInput ' + text + '" name="' + text + '" id="repeatRuleOutInp_' + ruleNr + '_' + text + '" value="' + content + '" /><br />';
+	}
+
 	var addRuleAccordionHTML = function(rule) {
 		$('#accordion_rules').append('<div class="group"><h3>Rule ' + ((rule !== null) ? rule.RuleId : "New") + ' </h3><div class="ruleDiv" id="ruleDiv_' + ruleNr + '"></div></div>');
-		$('#ruleDiv_' + ruleNr).append('<input type="hidden" name="RuleId" value="' + ((rule !== null) ? rule.RuleId : newRuleNr) + '">')
+		$('#ruleDiv_' + ruleNr).append('<input type="hidden" name="RuleId" value="' + ((rule !== null) ? rule.RuleId : newRuleNr) + '">');
 		$('#ruleDiv_' + ruleNr).append(createRuleDivCheck(ruleNr, "Active", (rule !== null) ? rule.Active: true));
 		$('#ruleDiv_' + ruleNr).append(createRuleDivInput(ruleNr, "InsertDate", (rule !== null) ? getDateTime(new Date(rule.InsertDate)) : getDateTime(new Date())));
 		$('#ruleDiv_' + ruleNr).append(createRuleDivInput(ruleNr, "ModifyDate", (rule !== null) ? getDateTime(new Date(rule.ModifyDate)) : getDateTime(new Date())));

@@ -18,6 +18,8 @@ var connectors = [];
 var zones = [];
 var rules = [];
 var newRules = [];
+var repeatRules = [];
+var newRepeatRules = [];
 var newZones = [];
 var units = [];
 var newUnits = [];
@@ -28,8 +30,10 @@ var statusList = [];
 var newRuleNr = 0;
 var newZoneNr = 0;
 var newUnitNr = 0;
+var newRepeatRuleNr = 0;
 
-
+// Database
+// --------
 storage.initSync({dir:'storageData/'});
 storage.getItem("connector", function (err, value) {
     if (!err && value !== undefined) {
@@ -39,6 +43,53 @@ storage.getItem("connector", function (err, value) {
         connector.pw = null;
     }
 });
+
+// CommandLineParsing
+// ------------------
+var distributorAddress = 'localhost';
+var distributorPort = 8081;
+if (process.argv.length > 2) {
+    var i = 2;
+    while (i < process.argv.length) {
+        switch (process.argv[i]) {
+            case '-h': // Help
+                console.log('BOESE Smart Home Userinterface');
+                console.log('This is a node js based UI for the BOESE SH system.');
+                console.log('\tnode main.js [options]');
+                console.log('If called without options it is assumed, that the distributor runs on localhost');
+                console.log('\toptions:');
+                console.log('\t\t-u\tURL of distributor (e.g. 192.168.0.1, localhost)');
+                console.log('\t\t-p\tPort of distributor(e.g. 8081)');
+                console.log('\t\t-cp\tConnector password (e.g. hwsf8dfc$wefuio');
+                process.exit(0);
+                break;
+            case '-u': // URL
+                if ((i + 1) < process.argv.length) {
+                    console.log(process.argv[i] + ' : ' + process.argv[i+1]);
+                    distributorAddress = process.argv[++i];
+                } else {}
+                break;
+            case '-p': // Port
+                if ((i + 1) < process.argv.length) {
+                    console.log(process.argv[i] + ' : ' + process.argv[i+1]);
+                    distributorPort = process.argv[++i];
+                } else {}
+                break;
+            case '-cp': // Connector password
+                if ((i + 1) < process.argv.length) {
+                    console.log(process.argv[i] + ' : ' + process.argv[i+1]);
+                    connector.pw = process.argv[++i];
+                    storage.setItem("connector", connector);
+                } else {}
+                break;
+        }
+        i++;
+    }
+}
+var distributorURI = 'ws://' + distributorAddress + ':' + distributorPort + '/events/';
+console.log('distributorURI: ' + distributorURI);
+
+
 
 // Socket.IO for webpage
 app.use("/html", express.static(__dirname + '/html'));
@@ -71,12 +122,20 @@ io.on('connection', function(socket){
         socket.emit('uiSendDeviceComponents', deviceComponentList);
     });
 
+    socket.on('requestRepeatRules', function(msg) {
+        socket.emit('uiSendRepeatRules', repeatRules);
+    });
+
     socket.on('requestRules', function(msg) {
         socket.emit('uiSendRules', rules);
     });
 
     socket.on('requestUnits', function(msg) {
         socket.emit('uiSendUnits', units);
+    });
+
+    socket.on('requestNewRepeatRuleNr', function(func) {
+        func(--newRepeatRuleNr);
     });
 
     socket.on('requestNewRuleNr', function(func) {
@@ -97,6 +156,11 @@ io.on('connection', function(socket){
         setTimeout(function() {
             sendUserRequestAllRules(distributorConnection);
         }, 3000);
+    });
+
+    socket.on('createNewRepeatRule', function(repeatRuleList) {
+        newRepeatRules = repeatRuleList;
+        sendUserCreateNewRepeatRules(distributorConnection, repeatRuleList);
     });
 
     socket.on('requestZones', function(msg) {
@@ -140,7 +204,7 @@ http.listen(3000, function(){
 
 // Websockets for Destributor
 
-client.connect('ws://localhost:8081/events/', null, null, null, null);
+client.connect(distributorURI, null, null, null, null);
 // client.connect('ws://192.168.23.178:8081/events/', null, null, null, null);
 
 client.on('connectFailed', function(error) {
@@ -176,11 +240,17 @@ client.on('connect', function(connection) {
                     sendUserRequestAllData(connection);
             		break;
                 case 9: // SendValue
-                    if (obj.DeviceId && obj.DeviceComponentId && obj.Value && obj.Timestamp) {
+                    if (obj.DeviceId !== undefined && obj.DeviceComponentId !== undefined && obj.Value !== undefined && obj.Timestamp !== undefined) {
                         for (var i = 0; i < deviceComponentList.length; i++) {
                             if (deviceComponentList[i].DeviceId == obj.DeviceId) {
-                                deviceComponentList[i].DeviceComponents.Value = obj.Value;
-                                deviceComponentList[i].DeviceComponents.Timestamp = obj.Timestamp;
+                                for (var j = 0; j < deviceComponentList[i].DeviceComponents.length; j++) {
+                                    if (deviceComponentList[i].DeviceComponents[j].DeviceComponentId == obj.DeviceComponentId) {
+                                        deviceComponentList[i].DeviceComponents[j].Value = obj.Value;
+                                        deviceComponentList[i].DeviceComponents[j].Timestamp = obj.Timestamp;
+                                        break;
+                                    }
+                                }
+                                break;
                             }
                         }
                         io.emit('uiSendDeviceComponents', deviceComponentList);
@@ -190,13 +260,13 @@ client.on('connect', function(connection) {
                     // TODO whatever?? will be called if this connector sends a value that is valid
                     break;
                 case 13: // SendStatus
-                    if (obj.DeviceComponentId && obj.StatusCode) {
+                    if (obj.DeviceComponentId !== undefined && obj.StatusCode !== undefined) {
                         statusList.push({DeviceComponentId : obj.DeviceComponentId, StatusCode : obj.StatusCode, Timestamp : obj.Timestamp});
                         io.emit('uiSendStatusList', statusList);
                     }
                     break; 
                 case 51: // UserSendDevices
-                    if (obj.Devices) {
+                    if (obj.Devices !== undefined) {
                         for (var i = 0; i < obj.Devices.length; i++) {
                             addToObjectArray(deviceList, "DeviceId", obj.Devices[i]);
                         }
@@ -213,7 +283,7 @@ client.on('connect', function(connection) {
                 case 53: //UserSendDeviceComponents
                     var deCo = {};
                     var devId = -1;
-                    if (obj.DeviceId) {
+                    if (obj.DeviceId !== undefined) {
                         devId = obj.DeviceId;
                         deCo = obj.Components;
                     }
@@ -235,18 +305,18 @@ client.on('connect', function(connection) {
                     io.emit('uiSendDeviceComponents', deviceComponentList);
                     break;
                 case 56: // UserSendConnectors
-                    if (obj.Connectors) {
+                    if (obj.Connectors !== undefined) {
                         connectors = obj.Connectors;
                     }
                     break; 
                 case 58: // UserSendZones
-                    if (obj.Zones) {
+                    if (obj.Zones !== undefined) {
                         zones = obj.Zones;
                     }
                     io.emit('uiSendZones', zones);
                     break;
                 case 60: // UserSendRules
-                    if (obj.Rules) {
+                    if (obj.Rules !== undefined) {
                         rules = obj.Rules;
                     } else {
                         rules = [];
@@ -260,7 +330,7 @@ client.on('connect', function(connection) {
                     io.emit("uiSendRules", rules);
                     break;
                 case 62: // UserSendUnits
-                    if (obj.Units) {
+                    if (obj.Units !== undefined) {
                         units = obj.Units;
                     } else {
                         units = [];
@@ -273,18 +343,32 @@ client.on('connect', function(connection) {
                     }
                     io.emit('uiSendUnits', units);
                     break;
+                case 64: // UserSendRepeatRules
+                    if (obj.Rules !== undefined) {
+                        repeatRules = obj.Rules;
+                    } else {
+                        repeatRules = [];
+                    }
+                    if (newRepeatRules.length > 0) { // TODO show user incorrect rules
+                        for (var i = 0; i < newRepeatRules.length; i++) {
+                            renameProperty(newRepeatRules[i], "TempRuleId", "RepeatRuleId");
+                            repeatRules.push(newRepeatRules[i]);
+                        }  
+                    }
+                    io.emit("uiSendRepeatRules", repeatRules);
+                    break;
                 case 81: // UserSendTemps
-                    if (obj.TmpConnectors) {
+                    if (obj.TmpConnectors !== undefined) {
                         temporaries.TmpConnectors = obj.TmpConnectors;
                     } else {
                         temporaries.TmpConnectors = [];
                     }
-                    if (obj.TmpDevices) {
+                    if (obj.TmpDevices !== undefined) {
                         temporaries.TmpDevices = obj.TmpDevices;
                     } else {
                         temporaries.TmpDevices = [];
                     }
-                    if (obj.TmpDeviceComponents) {
+                    if (obj.TmpDeviceComponents !== undefined) {
                         temporaries.TmpDeviceComponents = obj.TmpDeviceComponents;
                     } else {
                         temporaries.TmpDevices = [];
@@ -292,7 +376,7 @@ client.on('connect', function(connection) {
                     io.emit('uiSendTemps', temporaries);
                     break;
                 case 91: // UserConfirmRules
-                    if (obj.Rules) {
+                    if (obj.Rules !== undefined) {
                         for (var newRule in newRules) {
                             for (var j = 0; j < obj.Rules.length; j++) {
                                 if (newRule.TempRuleId == obj.Rules.TempRuleId) {
@@ -304,7 +388,7 @@ client.on('connect', function(connection) {
                     }
                     break;
                 case 93: // UserConfirmZones
-                    if (obj.Zones) {
+                    if (obj.Zones !== undefined) {
                         for (var newZone in newZones) {
                             for (var j = 0; j < obj.Zones.length; j++) {
                                 if (newZone.TempZoneId == obj.Zones.TempZoneId) {
@@ -315,7 +399,7 @@ client.on('connect', function(connection) {
                     }
                     break;
                 case 95: // UserConfirmUnits
-                    if (obj.Units) {
+                    if (obj.Units !== undefined) {
                         for (var newUnit in newUnits) {
                             for (var j = 0; j < obj.Units.length; j++) {
                                 if (newUnit.TempZoneId == obj.Units.TempUnitId) {
@@ -323,6 +407,18 @@ client.on('connect', function(connection) {
                                 }
                             }
                         }
+                    }
+                    break;
+                case 97: // UserConfirmRepeatRules
+                    if (obj.Rules !== undefined) {
+                        for (var i = 0; i < newRepeatRules.length; i++) {
+                            for (var j = 0; j < obj.Rules.length; j++) {
+                                if (newRepeatRules[i].TempRepeatRuleId == obj.Rules[j].TempRuleId) {
+                                    newRepeatRules.splice(i, 1);
+                                }
+                            }
+                        }
+                        sendUserRequestAllRepeatRules(connection);
                     }
                     break;
             }
@@ -361,6 +457,7 @@ var sendUserRequestAllData = function(connection) {
     sendUserRequestAllConnectors(connection);
     sendUserRequestAllZones(connection);
     sendUserRequestAllRules(connection);
+    sendUserRequestAllRepeatRules(connection);
     sendUserRequestTemps(connection);
     sendUserRequestAllUnits(connection);
 }
@@ -412,6 +509,28 @@ var sendUserRequestTemps = function(connection) {
         }
     }
 }
+
+var sendUserCreateNewRepeatRules = function(connection, repeatRuleList) {
+    if (connection !== null) {
+        var reqConn = {Header : generateHeader(96),
+                        Rules : repeatRuleList
+                        };
+        if (connection.connected) {
+            connection.send(JSON.stringify(reqConn));
+            console.log(JSON.stringify(reqConn));
+        }
+    }
+}
+
+var sendUserRequestAllRepeatRules = function(connection) {
+    if (connection !== null) {
+        var reqConn = {Header : generateHeader(63)};
+        if (connection.connected) {
+            connection.send(JSON.stringify(reqConn));
+            console.log(JSON.stringify(reqConn));
+        }
+    }
+} 
 
 var sendUserCreateRules = function(connection, ruleList) {
     if (connection !== null) {
