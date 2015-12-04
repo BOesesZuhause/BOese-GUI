@@ -228,13 +228,22 @@ $(document).ready(function () {
 	socket.emit('requestDevices', null);
 	socket.emit('requestDeviceComponents', null);
 	socket.emit('requestTemps', null);
+	socket.emit('requestStatusList', null);
+	socket.emit('requestNotificationList', null);
 
-	socket.emit('uiSendStatusList', function(data) {
-		$('#tab_notification').empty();
-		$('#tab_notification').append('<table id="notification_table"></table>');
-		$('#notification_table').append('<tr><th>Time</th><th>DeviceComponentId</th><th>StatusCode</th><th>StatusNachricht</th></tr>');
+	socket.on('uiSendStatusList', function(data) {
+		$('#notification_status_table').empty();
+		$('#notification_status_table').append('<tr><th>Time</th><th>DeviceComponentId</th><th>StatusCode</th><th>StatusNachricht</th></tr>');
 		for (var i = 0; i < data.length; i++) {
-			$('#notification_table').append('<tr><td>' + getDateTime(new Date(data[i].Timestamp)) + '</td><td>' + data[i].DeviceComponentId + '</td><td>' + STATUSARRAY[data[i].StatusCode] + '</td></tr>');
+			$('#notification_status_table').append('<tr><td>' + getDateTime(new Date(data[i].Timestamp)) + '</td><td>' + data[i].DeviceComponentId + '</td><td>' + STATUSARRAY[data[i].StatusCode] + '</td></tr>');
+		}
+	});
+
+	socket.on('uiSendNotificationList', function(data) {
+		$('#notification_notification_table').empty();
+		$('#notification_notification_table').append('<tr><th>Time</th><th>NotificationType</th><th>NotificationText</th></tr>');
+		for (var i = 0; i < data.length; i++) {
+			$('#notification_notification_table').append('<tr><td>' + getDateTime(new Date(data[i].Timestamp)) + '</td><td>' + data[i].NotificationType + '</td><td>' + data[i].NotificationText + '</td></tr>');
 		}
 	});
 
@@ -298,7 +307,7 @@ $(document).ready(function () {
 					+ '<td><input class="confirm_temp" type="checkbox"></td>'
 					+ '</tr>'
 					);
-				//$('.zoneSelect').selectmenu();
+				$('.zoneSelect').selectmenu({width: 200});
 				// $('overviewDiv_dev_tab_devZone_' + data.TmpDevices[i].DeviceTmpId).append(insertZoneSelectable());
 				// $('overviewDiv_dev_tab_devZone_' + data.TmpDevices[i].DeviceTmpId).selectmenu();
 			}
@@ -329,6 +338,7 @@ $(document).ready(function () {
 					+ '<td><input class="confirm_temp" type="checkbox"></td>'
 					+ '</tr>'
 					);
+				$('.unitSelect').selectmenu({width: 200});
 			}
 		} else {}
 		$('#accordion_overview_temps').accordion("refresh");
