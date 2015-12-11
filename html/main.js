@@ -89,7 +89,7 @@ $(document).ready(function () {
 						event.preventDefault();
 						var accRuleLength = $('#accordion_rules').children().length;
 						var newRuleList = [];
-						var error = true;
+						var error = false;
 						var parser = new DOMParser();
 						for (var i = 0; i < accRuleLength; i++) {
 							var ruleDivChilds = $('#ruleDiv_' + i).children();
@@ -151,13 +151,19 @@ $(document).ready(function () {
 								}
 							});
 							// TODO add here to change existing rules
-							if ((newRule.RuleId < 0) 
-									&& (newRule.Actions != null)
-									&& (newRule.Conditions != null)
-									&& (newRule.Permissions != null)) {
-								renameProperty(newRule, "RuleId", "TempRuleId");
-								newRuleList.push(newRule);
-								error = false;
+							if (newRule.RuleId < 0) {
+								if ((newRule.Actions != null)
+										&& (newRule.Conditions != null)
+										&& (newRule.Permissions != null)) {
+									renameProperty(newRule, "RuleId", "TempRuleId");
+									newRuleList.push(newRule);
+								} else {
+									console.log("Rule ID: " + newRule.RuleId);
+									console.log(newRule.Actions);
+									console.log(newRule.Conditions);
+									console.log(newRule.Permissions);
+									error = true;
+								}
 							} else if (newRule.RuleId >= 0) {
 								
 							}
@@ -500,8 +506,8 @@ $(document).ready(function () {
 	var addRuleAccordion = function(rule) {
 		if (rule == null) {
 			var date = new Date();
-			socket.emit('requestNewRuleNr', function (ruleNr) { 
-				newRuleNr = ruleNr;
+			socket.emit('requestNewRuleNr', function (rNr) { 
+				newRuleNr = rNr;
 				addRuleAccordionHTML(null);
 			});
 		} else {
@@ -522,9 +528,9 @@ $(document).ready(function () {
 		repeatRuleNr++;
 	}
 
-	var createRepeatRuleDivInput = function(ruleNr, text, content) {
-		return '<label class="lbl_RuleInput" for="repeatRuleOutInp_' + ruleNr + '_' + text + '">' + text + '</label>'
-				+ '<input class="ruleOutInput ' + text + '" name="' + text + '" id="repeatRuleOutInp_' + ruleNr + '_' + text + '" value="' + content + '" /><br />';
+	var createRepeatRuleDivInput = function(rNr, text, content) {
+		return '<label class="lbl_RuleInput" for="repeatRuleOutInp_' + rNr + '_' + text + '">' + text + '</label>'
+				+ '<input class="ruleOutInput ' + text + '" name="' + text + '" id="repeatRuleOutInp_' + rNr + '_' + text + '" value="' + content + '" /><br />';
 	}
 
 	var addRuleAccordionHTML = function(rule) {
@@ -541,14 +547,14 @@ $(document).ready(function () {
 	}
 
 
-	var createRuleDivCheck = function(ruleNr, text, checked) {
-		return '<label class="lbl_RuleInput" for="ruleOutChk_' + ruleNr + '_' + text + '">' + text + '</label>'
-				+ '<input type="checkbox" class="ruleOutCheck" name="' + text + '" id="ruleOutChk_' + ruleNr + '_' + text + '" ' + (checked ? 'checked' : '') + '><br />';
+	var createRuleDivCheck = function(rNr, text, checked) {
+		return '<label class="lbl_RuleInput" for="ruleOutChk_' + rNr + '_' + text + '">' + text + '</label>'
+				+ '<input type="checkbox" class="ruleOutCheck" name="' + text + '" id="ruleOutChk_' + rNr + '_' + text + '" ' + (checked ? 'checked' : '') + '><br />';
 	}
 
-	var createRuleDivInput = function(ruleNr, text, content) {
-		return '<label class="lbl_RuleInput" for="ruleOutInp_' + ruleNr + '_' + text + '">' + text + '</label>'
-				+ '<input class="ruleOutInput" name="' + text + '" id="ruleOutInp_' + ruleNr + '_' + text + '" value="' + content + '" /><br />';
+	var createRuleDivInput = function(rNr, text, content) {
+		return '<label class="lbl_RuleInput" for="ruleOutInp_' + rNr + '_' + text + '">' + text + '</label>'
+				+ '<input class="ruleOutInput" name="' + text + '" id="ruleOutInp_' + rNr + '_' + text + '" value="' + content + '" /><br />';
 	}
 
 
