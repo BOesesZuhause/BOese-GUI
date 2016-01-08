@@ -42,6 +42,7 @@ storage.initSync({dir:'storageData/'});
 // ------------------
 var distributorAddress = 'localhost';
 var distributorPort = 8081;
+var distributorUseTLS = false;
 if (process.argv.length > 2) {
     var i = 2;
     while (i < process.argv.length) {
@@ -55,6 +56,7 @@ if (process.argv.length > 2) {
                 console.log('\t\t-u\tURL of distributor (e.g. 192.168.0.1, localhost)');
                 console.log('\t\t-p\tPort of distributor(e.g. 8081)');
                 console.log('\t\t-cp\tConnector password (e.g. hwsf8dfc$wefuio');
+                console.log('\t\t-tls\tConnection to distributor uses tls');
                 process.exit(0);
                 break;
             case '-u': // URL
@@ -76,11 +78,15 @@ if (process.argv.length > 2) {
                     storage.setItem("connector", connector);
                 } else {}
                 break;
+            case '-tls': // Connection use tls encryption
+                distributorUseTLS = true;
+                break;
         }
         i++;
     }
 }
-var distributorURI = 'ws://' + distributorAddress + ':' + distributorPort + '/events/';
+var distributorURI = distributorUseTLS ? 'wss://' : 'ws://';
+distributorURI += distributorAddress + ':' + distributorPort + '/events/';
 console.log('distributorURI: ' + distributorURI);
 
 storage.getItem("connector", function (err, value) {
@@ -197,7 +203,7 @@ http.listen(3000, function(){
   console.log('listening on *:3000');
 });
 
-DistributorComm.connect(distributorURI, connector.id, connector.pw);
+DistributorComm.connect(distributorURI, connector.id, connector.pw, distributorUseTLS);
 
 var handleDistriError = function(err) {
     console.log(err);

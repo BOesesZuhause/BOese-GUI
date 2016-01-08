@@ -8,16 +8,20 @@ var DistributorComm = new EventEmitter();
 var distributorConnection = null;
 var connectorId = -1;
 var connectorPw = null;
+var connectorTLS = false;
 
 
-DistributorComm.connect = function(distributorURI, id, pw) {
+DistributorComm.connect = function(distributorURI, id, pw, tls) {
     if (id != null && id !== undefined) {
         connectorId = id;
     }
     if (pw != null && pw !== undefined) {
         connectorPw = pw;
     }
-    client.connect(distributorURI, null, null, null, null);
+    if (tls != null && tls !== undefined) {
+        connectorTLS = tls;
+    }
+    client.connect(distributorURI, null, null, null, connectorTLS ? {rejectUnauthorized : false} : {});
 }
 
 DistributorComm.setConnectorId = function(id) {
