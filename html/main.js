@@ -274,6 +274,20 @@ $(document).ready(function () {
 		}
 	});
 
+	socket.on('uiSendValue', function(data) {
+		$('#deviceComponentDiv_' + data.DeviceComponentId).each(function() {
+			$(this).children().each(function() {
+				if ($(this).attr('id') == 'deviceComponentOutInp_' + data.DeviceId + '_' + data.DeviceComponentId + '_Value') {
+					console.log($(this).attr('id'));
+					$(this).val(data.Value);
+				} else if ($(this).attr('id') == 'deviceComponentOutInp_' + data.DeviceId + '_' + data.DeviceComponentId + '_Value_Timestamp') {
+					console.log($(this).attr('id'));
+					$(this).html(getDateTime(new Date(data.Timestamp)));
+				} else {}
+			});
+		});
+	});
+
 	socket.on('uiSendTemps', function(data) {
 		$('#accordion_overview_temps').empty();
 		var isOneTmp = false;	
@@ -473,8 +487,9 @@ $(document).ready(function () {
 
 	var createDeviceCompDivInput = function(deviceNr, deviceComponentNr, text, content, isInput) {
 		return '<label class="lbl_DeviceInput" for="deviceComponentOutInp_' + deviceNr + '_' + deviceComponentNr + '_' + text + '">' + text + '</label>'
-				+ (!isInput ? '<span class="deviceOutInput" name="' + text + '" id="deviceComponentOutInp_' + deviceNr + '_' + deviceComponentNr + '_' + text + '">' + content + '</span><br />' 
-					: '<input class="deviceOutInput" name="' + text + '" id="deviceComponentOutInp_' + deviceNr + '_' + deviceComponentNr + '_' + text + '" value="' + content + '" /><br />');
+				+ (!isInput ? 
+						'<span class="deviceOutInput" name="' + text + '" id="deviceComponentOutInp_' + deviceNr + '_' + deviceComponentNr + '_' + text + '">' + content + '</span><br />' 
+					:   '<input class="deviceOutInput" name="' + text + '" id="deviceComponentOutInp_' + deviceNr + '_' + deviceComponentNr + '_' + text + '" value="' + content + '" /><br />');
 	}
 
 	var addDeviceAccordion = function(device) {

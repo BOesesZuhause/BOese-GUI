@@ -1,3 +1,4 @@
+'use strict';
 var WebSocketClient = require('websocket').client;
 var EventEmitter = require('events').EventEmitter
 var client = new WebSocketClient();
