@@ -24,7 +24,7 @@ $(document).ready(function () {
 	$(function() {
 		$('body').css('background-color', '#D5D5D5');
 		$('#tabs').tabs();
-		$('#headline_span h1:first').text("BOESE").css({'color': 'red', 'font-size': '50px'});
+		$('#headline_span h1:first').text("BOese").css({'color': 'red', 'font-size': '50px'});
 		$('#tabs ul:first li:eq(0) a').text("Übersicht");
 		$('#tabs ul:first li:eq(1) a').text("Geräte");
 		$('#tabs ul:first li:eq(2) a').text("Regeln");
@@ -278,10 +278,8 @@ $(document).ready(function () {
 		$('#deviceComponentDiv_' + data.DeviceComponentId).each(function() {
 			$(this).children().each(function() {
 				if ($(this).attr('id') == 'deviceComponentOutInp_' + data.DeviceId + '_' + data.DeviceComponentId + '_Value') {
-					console.log($(this).attr('id'));
 					$(this).val(data.Value);
 				} else if ($(this).attr('id') == 'deviceComponentOutInp_' + data.DeviceId + '_' + data.DeviceComponentId + '_Value_Timestamp') {
-					console.log($(this).attr('id'));
 					$(this).html(getDateTime(new Date(data.Timestamp)));
 				} else {}
 			});

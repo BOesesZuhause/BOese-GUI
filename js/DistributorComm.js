@@ -255,6 +255,7 @@ var generateHeader = function(messageType) {
     return  {
             MessageType : messageType, 
             ConnectorId : connectorId,
+            Status : 0,
             Timestamp : new Date().getTime()}
 }
 

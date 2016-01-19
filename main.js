@@ -56,7 +56,7 @@ if (process.argv.length > 2) {
                 console.log('\toptions:');
                 console.log('\t\t-u\tURL of distributor (e.g. 192.168.0.1, localhost)');
                 console.log('\t\t-p\tPort of distributor(e.g. 8081)');
-                console.log('\t\t-cp\tConnector password (e.g. hwsf8dfc$wefuio');
+                console.log('\t\t-cp\tConnector password (e.g. hwsf8dfc$wefuio)');
                 console.log('\t\t-tls\tConnection to distributor uses tls encryption');
                 process.exit(0);
                 break;
