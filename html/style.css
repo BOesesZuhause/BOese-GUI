@@ -70,3 +70,13 @@ body {
 #tabs {
 	/*height: 500px;*/
 }
+
+#notification_notification_table td {
+	text-align:center;
+	margin-right: 5px;
+}
+
+#notification_notification_table th {
+	text-align:center;
+	margin-right: 5px;
+}

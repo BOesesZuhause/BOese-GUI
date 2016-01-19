@@ -11,6 +11,14 @@ STATUSARRAY[7] = 'DELETED';
 STATUSARRAY[100] = 'BATTERY';
 STATUSARRAY[110] = 'ACTOR_DOES_NOT_REACT';
 
+var NOTIFICATIONTYPES = [];
+NOTIFICATIONTYPES[-1] = "NO_TYPE";
+NOTIFICATIONTYPES[0] = "INFO";
+NOTIFICATIONTYPES[1] = "WARNING";
+NOTIFICATIONTYPES[2] = "ERROR";
+NOTIFICATIONTYPES[3] = "CRITICAL_ERROR";
+
+
 $(document).ready(function () {
 	var ruleNr = 0;
 	var repeatRuleNr = 0;
@@ -240,18 +248,18 @@ $(document).ready(function () {
 	socket.emit('requestNotificationList', null);
 
 	socket.on('uiSendStatusList', function(data) {
-		$('#notification_status_table').empty();
-		$('#notification_status_table').append('<tr><th>Time</th><th>DeviceComponentId</th><th>StatusCode</th><th>StatusNachricht</th></tr>');
-		for (var i = 0; i < data.length; i++) {
-			$('#notification_status_table').append('<tr><td>' + getDateTime(new Date(data[i].Timestamp)) + '</td><td>' + data[i].DeviceComponentId + '</td><td>' + STATUSARRAY[data[i].StatusCode] + '</td></tr>');
-		}
+		// $('#notification_status_table').empty();
+		// $('#notification_status_table').append('<tr><th>Time</th><th>DeviceComponentId</th><th>StatusCode</th><th>StatusNachricht</th></tr>');
+		// for (var i = 0; i < data.length; i++) {
+		// 	$('#notification_status_table').append('<tr><td>' + getDateTime(new Date(data[i].Timestamp)) + '</td><td>' + data[i].DeviceComponentId + '</td><td>' + STATUSARRAY[data[i].StatusCode] + '</td></tr>');
+		// }
 	});
 
 	socket.on('uiSendNotificationList', function(data) {
 		$('#notification_notification_table').empty();
 		$('#notification_notification_table').append('<tr><th>Time</th><th>NotificationType</th><th>NotificationText</th></tr>');
 		for (var i = 0; i < data.length; i++) {
-			$('#notification_notification_table').append('<tr><td>' + getDateTime(new Date(data[i].Timestamp)) + '</td><td>' + data[i].NotificationType + '</td><td>' + data[i].NotificationText + '</td></tr>');
+			$('#notification_notification_table').append('<tr><td>' + getDateTime(new Date(data[i].Timestamp)) + '</td><td>' + NOTIFICATIONTYPES[parseInt(data[i].NotificationType)] + '</td><td>' + data[i].NotificationText + '</td></tr>');
 		}
 	});
 
