@@ -23,8 +23,10 @@ $(document).ready(function () {
 
 	$(function() {
 		$('body').css('background-color', '#D5D5D5');
+		// $('#logo_span').html('<img src="html/img/boeseLogo.png" />');
+		$('#headline_span').html('<img src="html/img/BOese-rot.png" />');
+		// $('#headline_span h1:first').text("BOese").css({'color': 'red', 'font-size': '50px'});
 		$('#tabs').tabs();
-		$('#headline_span h1:first').text("BOese").css({'color': 'red', 'font-size': '50px'});
 		$('#tabs ul:first li:eq(0) a').text("Übersicht");
 		$('#tabs ul:first li:eq(1) a').text("Geräte");
 		$('#tabs ul:first li:eq(2) a').text("Regeln");

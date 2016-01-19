@@ -19,6 +19,11 @@ body {
 	margin: 0 auto;
 }
 
+#headline_span img {
+	height: 90px;
+	width: auto;
+}
+
 #login_span {
 	z-index: 100;
 	width: 100px;
