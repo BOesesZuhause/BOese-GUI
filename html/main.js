@@ -252,7 +252,7 @@ $(document).ready(function () {
 			$(this).children().each(function() {
 				var suffix = '_' + data.DeviceComponentId + '_Value';
 				if ($(this).attr('id').substr(-suffix.length) == suffix) {
-					$(this).val(data.Status);
+					$(this).val(data.Status + ': ' + STATUSARRAY[data.Status]);
 				} else {}
 			});
 		});

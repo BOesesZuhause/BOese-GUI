@@ -291,8 +291,14 @@ client.on('connect', function(connection) {
     connection.on('message', function(message) {
         if (message.type === 'utf8') {
             console.log("Received: ");
-            console.log(JSON.parse(message.utf8Data));
-            var obj = JSON.parse(message.utf8Data);
+            try {
+                console.log(JSON.parse(message.utf8Data));
+                var obj = JSON.parse(message.utf8Data);
+            } catch(e) {
+                console.log('DistributorComm: JSON parser error');
+                console.log(e);
+                return;
+            }
             switch(obj.Header.MessageType) {
                 case 120:
                     userSendHartBeat(obj);
