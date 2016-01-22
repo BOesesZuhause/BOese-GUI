@@ -233,7 +233,7 @@ DistributorComm.sendUserRequestAllUnits = function() {
 DistributorComm.sendRequestConnection = function() {
     if (distributorConnection !== null) {
         var reqConn = {Header : generateHeader(1),
-                        ConnectorName : "BoeseWebConnector",
+                        ConnectorName : "BOese-GUI",
                         IsUserConnector : true
                         };
         if (connectorPw != null) {

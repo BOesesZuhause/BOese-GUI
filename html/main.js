@@ -248,6 +248,14 @@ $(document).ready(function () {
 	socket.emit('requestNotificationList', null);
 
 	socket.on('uiSendStatusList', function(data) {
+		$('#deviceComponentDiv_' + data.DeviceComponentId).each(function() {
+			$(this).children().each(function() {
+				var suffix = '_' + data.DeviceComponentId + '_Value';
+				if ($(this).attr('id').substr(-suffix.length) == suffix) {
+					$(this).val(data.Status);
+				} else {}
+			});
+		});
 		// $('#notification_status_table').empty();
 		// $('#notification_status_table').append('<tr><th>Time</th><th>DeviceComponentId</th><th>StatusCode</th><th>StatusNachricht</th></tr>');
 		// for (var i = 0; i < data.length; i++) {
