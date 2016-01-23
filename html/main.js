@@ -123,6 +123,7 @@ $(document).ready(function () {
 											break;
 										case "Permissions":
 											var xmlString = $(this).val();
+											xmlString = xmlString.replace(/\s|\t|\r\n|\n|\r/g, "" );
 											var xmlDoc=parser.parseFromString(xmlString,"text/xml");
 											if(xmlDoc.getElementsByTagName("parsererror").length>0) {
 												$(this).css("background-color", "red");
@@ -135,6 +136,7 @@ $(document).ready(function () {
 											break;
 										case "Conditions":
 											var xmlString = $(this).val();
+											xmlString = xmlString.replace(/\s|\t|\r\n|\n|\r/g, "" );
 											var xmlDoc=parser.parseFromString(xmlString,"text/xml");
 											if(xmlDoc.getElementsByTagName("parsererror").length>0) {
 												$(this).css("background-color", "red");
@@ -147,6 +149,7 @@ $(document).ready(function () {
 											break;
 										case "Actions":
 											var xmlString = $(this).val();
+											xmlString = xmlString.replace(/\s|\t|\r\n|\n|\r/g, "" );
 											var xmlDoc=parser.parseFromString(xmlString,"text/xml");
 											if(xmlDoc.getElementsByTagName("parsererror").length>0) {
 												$(this).css("background-color", "red");
