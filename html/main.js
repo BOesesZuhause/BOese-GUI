@@ -18,6 +18,10 @@ NOTIFICATIONTYPES[1] = "WARNING";
 NOTIFICATIONTYPES[2] = "ERROR";
 NOTIFICATIONTYPES[3] = "CRITICAL_ERROR";
 
+var DEFAULT_RULE = {};
+DEFAULT_RULE.Permission = "<PERMISSION></PERMISSION>";
+DEFAULT_RULE.Condition = "<CONDITION></CONDITION>";
+DEFAULT_RULE.Action = "<ACTION></ACTION>";
 
 $(document).ready(function () {
 	var ruleNr = 0;
@@ -579,9 +583,9 @@ $(document).ready(function () {
 		$('#ruleDiv_' + ruleNr).append(createRuleDivCheck(ruleNr, "Active", (rule !== null) ? rule.Active: true));
 		$('#ruleDiv_' + ruleNr).append(createRuleDivInput(ruleNr, "InsertDate", (rule !== null) ? getDateTime(new Date(rule.InsertDate)) : getDateTime(new Date())));
 		$('#ruleDiv_' + ruleNr).append(createRuleDivInput(ruleNr, "ModifyDate", (rule !== null) ? getDateTime(new Date(rule.ModifyDate)) : getDateTime(new Date())));
-		$('#ruleDiv_' + ruleNr).append(createRuleDivInput(ruleNr, "Permissions", (rule !== null) ? escapeHtml(rule.Permissions) : ""));
-		$('#ruleDiv_' + ruleNr).append(createRuleDivInput(ruleNr, "Conditions", (rule !== null) ? escapeHtml(rule.Conditions) : ""));
-		$('#ruleDiv_' + ruleNr).append(createRuleDivInput(ruleNr, "Actions", (rule !== null) ? escapeHtml(rule.Actions) : ""));
+		$('#ruleDiv_' + ruleNr).append(createRuleDivInputTA(ruleNr, "Permissions", (rule !== null) ? escapeHtml(rule.Permissions) : DEFAULT_RULE.Permission, 2));
+		$('#ruleDiv_' + ruleNr).append(createRuleDivInputTA(ruleNr, "Conditions", (rule !== null) ? escapeHtml(rule.Conditions) : DEFAULT_RULE.Condition, 8));
+		$('#ruleDiv_' + ruleNr).append(createRuleDivInputTA(ruleNr, "Actions", (rule !== null) ? escapeHtml(rule.Actions) : DEFAULT_RULE.Action, 8));
 		$('#accordion_rules').accordion("refresh");
 		ruleNr++;
 	}
@@ -595,6 +599,12 @@ $(document).ready(function () {
 	var createRuleDivInput = function(rNr, text, content) {
 		return '<label class="lbl_RuleInput" for="ruleOutInp_' + rNr + '_' + text + '">' + text + '</label>'
 				+ '<input class="ruleOutInput" name="' + text + '" id="ruleOutInp_' + rNr + '_' + text + '" value="' + content + '" /><br />';
+	}
+
+	var createRuleDivInputTA = function(rNr, text, content, rowNr) {
+		return '<label class="lbl_RuleInput" for="ruleOutInp_' + rNr + '_' + text + '">' + text + '</label>'
+				+ '<textarea rows="' + rowNr + '" cols="110" name="' + text + '" id="ruleOutInp_' + rNr + '_' + text + '">' + content + '</textarea><br />';
+				// + '<input class="ruleOutInput" name="' + text + '" id="ruleOutInp_' + rNr + '_' + text + '" value="' + content + '" /><br />';
 	}
 
 	var compareDeviceId = function(a, b) {
