@@ -275,6 +275,7 @@ $(document).ready(function () {
 	});
 
 	socket.on('uiSendDevices', function(data) {
+		data.sort(compareDeviceId);
 		$('#accordion').empty();
 		for (var i = 0; i < data.length; i++) {
 			addDeviceAccordion(data[i]);
@@ -286,6 +287,7 @@ $(document).ready(function () {
 		for (var i = 0; i < data.length; i++) {
 			var devId = data[i].DeviceId;
 			var deCos = data[i].DeviceComponents;
+			deCos.sort(compareDeviceComponentId);
 			$('#deviceDiv_' + devId + '_accordion').empty();
 			for (var j = 0; j < deCos.length; j++) {
 				addDeviceComponentAccordion(devId, deCos[j]);
@@ -419,6 +421,7 @@ $(document).ready(function () {
 
 	socket.on("uiSendRepeatRules", function(data) {
 		$('#accordion_repeat_rules').empty();
+		data.sort(compareRepeatRuleId);
 		for (var i = 0; i < data.length; i++) {
 			addRepeatRuleAccordion(data[i]);
 		}
@@ -426,6 +429,7 @@ $(document).ready(function () {
 
 	socket.on("uiSendRules", function(data) {
 		$('#accordion_rules').empty();
+		data.sort(compareRuleId)
 		for (var i = 0; i < data.length; i++) {
 			addRuleAccordion(data[i]);
 		}
@@ -433,14 +437,15 @@ $(document).ready(function () {
 
 	socket.on('uiSendZones', function(data) {
 		zones = data;
+		zones.sort(compareZoneId);
 		$('#div_zone_tab').empty();
 		$('#div_zone_tab').html('<table id="zone_tab"><tr><th>ZoneId</th><th>SuperZoneId</th><th>ZoneName</th></tr></table>');
-		for (var i = 0; i < data.length; i++) {
+		for (var i = 0; i < zones.length; i++) {
 			$('#zone_tab').append(
 				'<tr>' + 
-					'<td>' + data[i].ZoneId + '</td>' +
-					'<td>' + data[i].SuperZoneId + '</td>' +
-					'<td>' + data[i].ZoneName + '</td>' +
+					'<td>' + zones[i].ZoneId + '</td>' +
+					'<td>' + zones[i].SuperZoneId + '</td>' +
+					'<td>' + zones[i].ZoneName + '</td>' +
 				'</tr>'
 				);
 		}
@@ -448,14 +453,15 @@ $(document).ready(function () {
 
 	socket.on('uiSendUnits', function(data) {
 		units = data;
+		units.sort(compareUnitId);
 		$('#div_unit_tab').empty();
 		$('#div_unit_tab').html('<table id="unit_tab"><tr><th>UnitId</th><th>UnitName</th><th>UnitSymbol</th></tr></table>');
-		for (var i = 0; i < data.length; i++) {
+		for (var i = 0; i < units.length; i++) {
 			$('#unit_tab').append(
 				'<tr>' + 
-					'<td>' + data[i].UnitId + '</td>' +
-					'<td>' + data[i].UnitName + '</td>' +
-					'<td>' + data[i].UnitSymbol + '</td>' +
+					'<td>' + units[i].UnitId + '</td>' +
+					'<td>' + units[i].UnitName + '</td>' +
+					'<td>' + units[i].UnitSymbol + '</td>' +
 				'</tr>'
 				);
 		}
@@ -591,6 +597,65 @@ $(document).ready(function () {
 				+ '<input class="ruleOutInput" name="' + text + '" id="ruleOutInp_' + rNr + '_' + text + '" value="' + content + '" /><br />';
 	}
 
+	var compareDeviceId = function(a, b) {
+		if (a.DeviceId < b.DeviceId) {
+			return -1;
+		} else if (a.DeviceId > b.DeviceId) {
+			return 1;
+		} else {
+			return 0;
+		}
+	}
+
+	var compareDeviceComponentId = function(a, b) {
+		if (a.DeviceComponentId < b.DeviceComponentId) {
+			return -1;
+		} else if (a.DeviceComponentId > b.DeviceComponentId) {
+			return 1;
+		} else {
+			return 0;
+		}
+	}
+
+	var compareZoneId = function(a, b) {
+		if (a.ZoneId < b.ZoneId) {
+			return -1;
+		} else if (a.ZoneId > b.ZoneId) {
+			return 1;
+		} else {
+			return 0;
+		}
+	}
+
+	var compareUnitId = function(a, b) {
+		if (a.UnitId < b.UnitId) {
+			return -1;
+		} else if (a.UnitId > b.UnitId) {
+			return 1;
+		} else {
+			return 0;
+		}
+	}
+	
+	var compareRuleId = function(a, b) {
+		if (a.RuleId < b.RuleId) {
+			return -1;
+		} else if (a.RuleId > b.RuleId) {
+			return 1;
+		} else {
+			return 0;
+		}
+	}
+	
+	var compareRepeatRuleId = function(a, b) {
+		if (a.RepeatRuleId < b.RepeatRuleId) {
+			return -1;
+		} else if (a.RepeatRuleId > b.RepeatRuleId) {
+			return 1;
+		} else {
+			return 0;
+		}
+	}
 
 	function getDateTime(date) {
 		var hour = date.getHours();
