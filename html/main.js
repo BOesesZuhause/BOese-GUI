@@ -181,16 +181,16 @@ $(document).ready(function () {
 										console.log(newRule.Actions);
 										console.log(newRule.Conditions);
 										console.log(newRule.Permissions);
-										error = true;
+										//error = true;
 									}
 								} else if (newRule.RuleId >= 0) {
 								}
 							});
 						}
-						if (!error) {
+						if (newRuleList.length != 0) {
 							socket.emit('createNewRule', newRuleList);
 						} else {
-							console.log("Error");
+							//console.log("Error");
 						}
 						
 					});
