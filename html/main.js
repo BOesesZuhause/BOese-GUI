@@ -164,26 +164,28 @@ $(document).ready(function () {
 												newRule.Actions = xmlString;
 											}
 											break;
+										default:
+											console.log("Unknown type");
+											break;
 									}
+								} else {}
+								// TODO add here to change existing rules
+								if (newRule.RuleId < 0) {
+									if ((newRule.Actions != null)
+											&& (newRule.Conditions != null)
+											&& (newRule.Permissions != null)) {
+										renameProperty(newRule, "RuleId", "TempRuleId");
+										newRuleList.push(newRule);
+									} else {
+										console.log("Rule ID: " + newRule.RuleId);
+										console.log(newRule.Actions);
+										console.log(newRule.Conditions);
+										console.log(newRule.Permissions);
+										error = true;
+									}
+								} else if (newRule.RuleId >= 0) {
 								}
 							});
-							// TODO add here to change existing rules
-							if (newRule.RuleId < 0) {
-								if ((newRule.Actions != null)
-										&& (newRule.Conditions != null)
-										&& (newRule.Permissions != null)) {
-									renameProperty(newRule, "RuleId", "TempRuleId");
-									newRuleList.push(newRule);
-								} else {
-									console.log("Rule ID: " + newRule.RuleId);
-									console.log(newRule.Actions);
-									console.log(newRule.Conditions);
-									console.log(newRule.Permissions);
-									error = true;
-								}
-							} else if (newRule.RuleId >= 0) {
-								
-							}
 						}
 						if (!error) {
 							socket.emit('createNewRule', newRuleList);
@@ -536,6 +538,7 @@ $(document).ready(function () {
 	}
 
 	var addRepeatRuleAccordion = function(rule) {
+		repeatRuleNr = 0;
 		if (rule == null) {
 			var date = new Date();
 			socket.emit('requestNewRepeatRuleNr', function (repeatRuleNr) { 
@@ -548,6 +551,7 @@ $(document).ready(function () {
 	}
 
 	var addRuleAccordion = function(rule) {
+		ruleNr = 0;
 		if (rule == null) {
 			var date = new Date();
 			socket.emit('requestNewRuleNr', function (rNr) { 
