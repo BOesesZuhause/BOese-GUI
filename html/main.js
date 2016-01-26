@@ -427,6 +427,7 @@ $(document).ready(function () {
 
 	socket.on("uiSendRepeatRules", function(data) {
 		$('#accordion_repeat_rules').empty();
+		repeatRuleNr = 0;
 		data.sort(compareRepeatRuleId);
 		for (var i = 0; i < data.length; i++) {
 			addRepeatRuleAccordion(data[i]);
@@ -435,6 +436,7 @@ $(document).ready(function () {
 
 	socket.on("uiSendRules", function(data) {
 		$('#accordion_rules').empty();
+		ruleNr = 0;
 		data.sort(compareRuleId)
 		for (var i = 0; i < data.length; i++) {
 			addRuleAccordion(data[i]);
@@ -538,7 +540,6 @@ $(document).ready(function () {
 	}
 
 	var addRepeatRuleAccordion = function(rule) {
-		repeatRuleNr = 0;
 		if (rule == null) {
 			var date = new Date();
 			socket.emit('requestNewRepeatRuleNr', function (repeatRuleNr) { 
@@ -551,7 +552,6 @@ $(document).ready(function () {
 	}
 
 	var addRuleAccordion = function(rule) {
-		ruleNr = 0;
 		if (rule == null) {
 			var date = new Date();
 			socket.emit('requestNewRuleNr', function (rNr) { 
